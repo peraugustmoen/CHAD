@@ -1,11 +1,18 @@
 Package: CHAD
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: CHAngepoint Detector (CHAD)
+Version: 1.0
+Date: 2024-11-05
+Authors@R: 
+  c(person(family = "Moen",
+           given = "Per August Jarval",
+           role = c("cre","aut"),
+           email = "pamoen@math.uio.no",
+           comment = c(ORCID = "0009-0003-9990-8341")))
+Maintainer: Per August Jarval Moen <pamoen@math.uio.no>
+Description: Online changepoint detection using the offline test statistics of Liu et al. (2021) <DOI: 10.1214/20-AOS1994> and Moen (2024) <doi:10.48550/arXiv.2405.07757>
+License: GPL-3
+NeedsCompilation: yes
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 7.3.2
