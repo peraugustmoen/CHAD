@@ -8,8 +8,9 @@
 # Date: 7th of November 2024
 
 MC_ocd_FA <- function(dim, false_alarm_prob, N, beta=1, sparsity='auto', MC_reps,
-                      est_lenght = 0, seed = 123){
+                      est_length = 0, seed = 123){
   set.seed(seed)
+  N = N - est_length
   peak_stat <- matrix(0, MC_reps, 3)
   colnames(peak_stat) <- c('diag','off_d','off_s')
   if (sparsity == 'sparse') peak_stat <- peak_stat[,-2]
@@ -17,6 +18,11 @@ MC_ocd_FA <- function(dim, false_alarm_prob, N, beta=1, sparsity='auto', MC_reps
 
   # run MC_reps simulations for peak statistics of S_diag, S_{off,d} and S_{off,s}
   cat("Running MC simulation for OCD\n")
+  mean_est = rep(0,dim)
+  if(est_length>0){
+    y_est = matrix(rnorm(dim*est_length), nrow = dim, ncol = est_length)
+    mean_est = rowSums(y_est)/est_length
+  }
 
   for (rep in 1:MC_reps){
     if(rep %%100==0){
@@ -27,7 +33,7 @@ MC_ocd_FA <- function(dim, false_alarm_prob, N, beta=1, sparsity='auto', MC_reps
 
     for (i in 1:N){
       x_new <- rnorm(dim)
-      ret <- ocd::ocd_update(x_new, A, tail, beta, sparsity)
+      ret <- ocd::ocd_update(x_new - mean_est, A, tail, beta, sparsity)
       A <- ret$A; tail <- ret$tail
       peak_stat[rep,] <- pmax(peak_stat[rep,], ret$stat)
     }
@@ -42,13 +48,19 @@ MC_ocd_FA <- function(dim, false_alarm_prob, N, beta=1, sparsity='auto', MC_reps
 }
 
 MC_Mei_FA <- function(dim, false_alarm_prob, N, beta = 1, b=beta/sqrt(dim), MC_reps,
-                      seed = 123){
+                      est_length = 0, seed = 123){
   set.seed(seed)
+  N = N - est_length
   peak_stat <- matrix(0, MC_reps, 2)
   colnames(peak_stat) <- c('max','sum')
 
   # run MC_reps simulations for peak statistics
   cat("Running MC simulation for Mei\n")
+  mean_est = rep(0,dim)
+  if(est_length>0){
+    y_est = matrix(rnorm(dim*est_length), nrow = dim, ncol = est_length)
+    mean_est = rowSums(y_est)/est_length
+  }
   for (rep in 1:MC_reps){
     if(rep %%100==0){
       cat("Iteration: ", rep, "\n")
@@ -57,7 +69,7 @@ MC_Mei_FA <- function(dim, false_alarm_prob, N, beta = 1, b=beta/sqrt(dim), MC_r
 
     for (i in 1:N){
       x_new <- rnorm(dim)
-      ret <- ocd::Mei_update(x_new, R, b)
+      ret <- ocd::Mei_update(x_new - mean_est, R, b)
       R <- ret$R
       peak_stat[rep,] <- pmax(peak_stat[rep,], ret$stat)
     }
@@ -76,11 +88,17 @@ MC_Mei_FA <- function(dim, false_alarm_prob, N, beta = 1, b=beta/sqrt(dim), MC_r
 }
 
 MC_XS_FA <- function(dim, false_alarm_prob, N, p0=1/sqrt(dim), w=200, MC_reps,
-                  seed=123){
+                     est_length = 0, seed=123){
   set.seed(seed)
+  N = N - est_length
   peak_stat <- rep(-Inf, MC_reps)
 
   cat("Running MC simulation for XS\n")
+  mean_est = rep(0,dim)
+  if(est_length>0){
+    y_est = matrix(rnorm(dim*est_length), nrow = dim, ncol = est_length)
+    mean_est = rowSums(y_est)/est_length
+  }
   # run MC_reps simulations for peak statistics
   for (rep in 1:MC_reps){
     if(rep %%100==0){
@@ -90,7 +108,7 @@ MC_XS_FA <- function(dim, false_alarm_prob, N, p0=1/sqrt(dim), w=200, MC_reps,
 
     for (i in 1:N){
       x_new <- rnorm(dim)
-      ret <- ocd::XS_update(x_new, X_recent, CUSUM, p0, w)
+      ret <- ocd::XS_update(x_new - mean_est, X_recent, CUSUM, p0, w)
       X_recent <- ret$X_recent; CUSUM <- ret$CUSUM
       peak_stat[rep] <- pmax(peak_stat[rep], ret$stat)
     }
@@ -104,11 +122,17 @@ MC_XS_FA <- function(dim, false_alarm_prob, N, p0=1/sqrt(dim), w=200, MC_reps,
 }
 
 MC_Chan_FA <- function(dim, false_alarm_prob, N,  p0=1/sqrt(dim), w=200,
-                    lambda=sqrt(8)-2, MC_reps, seed = 123){
+                    lambda=sqrt(8)-2, MC_reps, est_length = 0, seed = 123){
   set.seed(seed)
+  N = N - est_length
   peak_stat <- rep(-Inf, MC_reps)
 
   cat("Running MC simulation for CHAN\n")
+  mean_est = rep(0,dim)
+  if(est_length>0){
+    y_est = matrix(rnorm(dim*est_length), nrow = dim, ncol = est_length)
+    mean_est = rowSums(y_est)/est_length
+  }
   # run MC_reps simulations for peak statistics
   for (rep in 1:MC_reps){
     if(rep %%100==0){
@@ -118,7 +142,7 @@ MC_Chan_FA <- function(dim, false_alarm_prob, N,  p0=1/sqrt(dim), w=200,
 
     for (i in 1:N){
       x_new <- rnorm(dim)
-      ret <- ocd::Chan_update(x_new, X_recent, CUSUM, p0, w, lambda)
+      ret <- ocd::Chan_update(x_new - mean_est, X_recent, CUSUM, p0, w, lambda)
       X_recent <- ret$X_recent; CUSUM <- ret$CUSUM
       peak_stat[rep] <- pmax(peak_stat[rep], ret$stat)
     }

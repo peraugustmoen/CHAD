@@ -11,6 +11,8 @@ library(CHAD)
 library(foreach)
 library(doSNOW)
 library(abind)
+library(ggplot2)
+library(patchwork)
 
 ## Saving options
 save = TRUE # if results should be saved
@@ -50,24 +52,26 @@ source("inst/tuning_competing_methods.R")
 
 
 ## Global parameters
-N = 1500 # number of data samples considered
-chgptloc = round(N/3)
-num_sim = 1000 # number of iterations in the simulation
-ps = c(100,1000)
-sparsities100 = c(1,5,10,100)
-sparsities1000 = c(1,5,30,1000)
-thetas = seq(0.0, 4.0, by=0.2)
-num_methods = 5
-num_cores = 6
-MC_reps = 1000
-false_alarm_prob = 0.05
-estimate_mean = FALSE
+# N = 1500 # number of data samples considered
+# chgptloc = round(N/3)
+# num_sim = 1000 # number of iterations in the simulation
+# ps = c(100,1000)
+# sparsities100 = c(1,5,10,100)
+# sparsities1000 = c(1,5,30,1000)
+# thetas = seq(0.0, 4.0, by=0.2)
+# num_methods = 5
+# num_cores = 6
+# MC_reps = 1000
+# false_alarm_prob = 0.05
+# estimate_mean = FALSE
+# estimate_mean_until = 0
 
 # testing
 N = 30 # number of data samples considered
 chgptloc = round(N/3)
-num_sim = 15*6 # number of iterations in the simulation
-ps = c(100,1000)
+num_sim = 3*6 # number of iterations in the simulation
+#ps = c(100,1000)
+ps = c(2000)
 sparsities100 = c(1,5,10,100)
 sparsities1000 = c(1,5,30,1000)
 thetas = seq(0.0, 8.0, by=0.4)
@@ -76,7 +80,13 @@ num_cores = 6
 MC_reps = 1000
 false_alarm_prob = 0.05
 estimate_mean = FALSE
+estimate_mean_until = round(chgptloc/2)
 constant_penalty = TRUE
+
+if(!estimate_mean){
+  estimate_mean_until=0
+}
+
 
 ## print parameters to file
 {
@@ -121,8 +131,8 @@ if(!identical(load_threshes_dir,"")){
                                    estimate_mean = estimate_mean,
                                    MC_reps=MC_reps, N=N,seed = 123)
 
-    thresholds[[2]][[v]] = MC_ocd_FA(p, false_alarm_prob, MC_reps=MC_reps,
-                           N=N,seed = 123)
+    thresholds[[2]][[v]] = MC_ocd_FA(dim = p, false_alarm_prob = false_alarm_prob,
+                                     MC_reps=MC_reps, N = N, est_length = estimate_mean_until, seed = 123)
     thresholds[[3]][[v]] = MC_Mei_FA(p, false_alarm_prob=false_alarm_prob, N=N, MC_reps = MC_reps,
                            seed = 123)
     thresholds[[4]][[v]] <- MC_XS_FA(p, false_alarm_prob = false_alarm_prob, N=N, MC_reps = MC_reps,
@@ -188,17 +198,23 @@ if(!identical(load_results_dir, "")){
           detector_xs <- ocd::ChangepointDetector(dim=p, method='XS',thresh=thresholds[[4]][[v]])
           detector_chan <- ocd::ChangepointDetector(dim=p, method='Chan',thresh=thresholds[[5]][[v]])
 
+          if(estimate_mean){
+            mean_est = rowSums(ys[,1:estimate_mean_until])/estimate_mean_until
+          }
           for (i in 1:N) {
 
             detector <- getData(detector, ys[,i])
 
-            detector_ocd <- ocd::getData(detector_ocd, ys[,i])
 
-            detector_mei <- ocd::getData(detector_mei, ys[,i])
+            if(i>estimate_mean_until){
+              detector_ocd <- ocd::getData(detector_ocd, ys[,i])
 
-            detector_xs <- ocd::getData(detector_xs, ys[,i])
+              detector_mei <- ocd::getData(detector_mei, ys[,i])
 
-            detector_chan <- ocd::getData(detector_chan, ys[,i])
+              detector_xs <- ocd::getData(detector_xs, ys[,i])
+
+              detector_chan <- ocd::getData(detector_chan, ys[,i])
+            }
 
           }
 
@@ -210,13 +226,18 @@ if(!identical(load_results_dir, "")){
           detectors[[5]] = detector_chan
 
 
+          if(identical(status(detector), 'monitoring')){
+            result_array[v,j,t,1] = N
+          }else{
+            result_array[v,j,t,1] = (status(detector))
+          }
 
-          for (i in 1:length(detectors)) {
+          for (i in 2:length(detectors)) {
             det = detectors[[i]]
             if(identical(status(det), 'monitoring')){
               result_array[v,j,t,i] = N
             }else{
-              result_array[v,j,t,i] = (status(det))
+              result_array[v,j,t,i] = (status(det)) + estimate_mean_until
             }
           }
 
@@ -242,14 +263,84 @@ results[1,3,4,,]-chgptloc
 
 meanabove = function(v) mean(v[v>0])
 
-s_ind = 2
-p_ind = 2
+s_ind = 4
+p_ind = 1
 
 plot(thetas,apply(results[p_ind,s_ind,,1,]-chgptloc, 1, meanabove),type="l"  )
 lines(thetas,apply(results[p_ind,s_ind,,2,]-chgptloc, 1, meanabove),type="l" ,col=2 )
 lines(thetas,apply(results[p_ind,s_ind,,3,]-chgptloc, 1, meanabove),type="l" ,col=3 )
 lines(thetas,apply(results[p_ind,s_ind,,4,]-chgptloc, 1, meanabove),type="l" ,col=4 )
 lines(thetas,apply(results[p_ind,s_ind,,5,]-chgptloc, 1, meanabove),type="l" ,col=5 )
+
+
+
+
+
+
+## Plotting
+p_ind = 1
+lenn = length(apply(results[p_ind,s_ind,,1,]-chgptloc, 1, meanabove))
+plots = list()
+for (i in 1:length(sparsities100)) {
+  s_ind = i
+  plotdata <- data.frame(
+    x = thetas,
+    y = c(apply(results[p_ind,s_ind,,1,]-chgptloc, 1, meanabove),
+          apply(results[p_ind,s_ind,,2,]-chgptloc, 1, meanabove),
+          apply(results[p_ind,s_ind,,3,]-chgptloc, 1, meanabove),
+          apply(results[p_ind,s_ind,,4,]-chgptloc, 1, meanabove),
+          apply(results[p_ind,s_ind,,5,]-chgptloc, 1, meanabove)),
+    Method = factor(c(rep("CHAD", lenn), rep("ocd", lenn), rep("Mei",lenn), rep("XS", lenn),
+                      rep("Chan",lenn)))
+
+  )
+  if(p_ind == 1){
+    ss = sparsities100[i]
+  }else{ss = sparsities1000[i]}
+
+  plot_base <- ggplot(data = plotdata, aes(x = x, y = y, color = Method, linetype = Method)) +
+    geom_line() +              # Plot lines
+    scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
+    scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
+    theme_bw() +               # Add theme_bw()
+    theme(legend.position = "right") +
+    scale_y_continuous(limits = c(0,N - chgptloc)) +
+    ggtitle(bquote(s == .(ss))) +
+    theme(plot.title = element_text(hjust = 0.5))+
+    ylab("Detection delay") +
+    xlab(bquote(phi)) +
+    theme(legend.title = element_blank())
+
+
+  if (i %in% c(2,4)) {
+    plot_base <- plot_base + theme(axis.title.y = element_blank(), axis.text.y = element_blank())
+  }
+  if (i %in% c(1,2)) {
+    plot_base <- plot_base + theme(axis.title.x = element_blank(), axis.text.x = element_blank())
+  }
+
+  plots[[i]] = plot_base
+}
+# Combine the plots using patchwork, and share the legend
+combined_plot <- (plots[[1]] + plots[[2]]) / (plots[[3]] + plots[[4]]) +
+  plot_layout(guides = 'collect') &
+  theme(legend.position = "bottom") &
+  plot_annotation(
+    title = "Average detection delay",
+    theme = theme(plot.title = element_text(hjust = 0.5))
+  )
+combined_plot
+
+
+
+
+
+
+
+
+
+
+
 
 ## Array of method outputs
 ## Dimensions: [p, sparsity, theta, method, iteration]
