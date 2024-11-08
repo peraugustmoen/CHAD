@@ -69,9 +69,9 @@ source("inst/tuning_competing_methods.R")
 # testing
 N = 30 # number of data samples considered
 chgptloc = round(N/3)
-num_sim = 3*6 # number of iterations in the simulation
+num_sim = 5*6 # number of iterations in the simulation
 #ps = c(100,1000)
-ps = c(2000)
+ps = c(100)
 sparsities100 = c(1,5,10,100)
 sparsities1000 = c(1,5,30,1000)
 thetas = seq(0.0, 8.0, by=0.4)
@@ -134,12 +134,12 @@ if(!identical(load_threshes_dir,"")){
     thresholds[[2]][[v]] = MC_ocd_FA(dim = p, false_alarm_prob = false_alarm_prob,
                                      MC_reps=MC_reps, N = N, est_length = estimate_mean_until, seed = 123)
     thresholds[[3]][[v]] = MC_Mei_FA(p, false_alarm_prob=false_alarm_prob, N=N, MC_reps = MC_reps,
-                           seed = 123)
+                                     est_length = estimate_mean_until, seed = 123)
     thresholds[[4]][[v]] <- MC_XS_FA(p, false_alarm_prob = false_alarm_prob, N=N, MC_reps = MC_reps,
-                          seed=123)
+                                     est_length = estimate_mean_until,seed=123)
 
     thresholds[[5]][[v]] <- MC_Chan_FA(p, false_alarm_prob = false_alarm_prob, N = N,
-                              MC_reps = MC_reps, seed = 123)
+                                       est_length = estimate_mean_until, MC_reps = MC_reps, seed = 123)
   }
   if(save){
     saveRDS(thresholds, file=sprintf("%s/thresholds.RDA", datadir))
@@ -197,7 +197,7 @@ if(!identical(load_results_dir, "")){
           detector_mei <- ocd::ChangepointDetector(dim=p, method='Mei',thresh=thresholds[[3]][[v]])
           detector_xs <- ocd::ChangepointDetector(dim=p, method='XS',thresh=thresholds[[4]][[v]])
           detector_chan <- ocd::ChangepointDetector(dim=p, method='Chan',thresh=thresholds[[5]][[v]])
-
+          mean_est = rep(0,p)
           if(estimate_mean){
             mean_est = rowSums(ys[,1:estimate_mean_until])/estimate_mean_until
           }
@@ -207,13 +207,13 @@ if(!identical(load_results_dir, "")){
 
 
             if(i>estimate_mean_until){
-              detector_ocd <- ocd::getData(detector_ocd, ys[,i])
+              detector_ocd <- ocd::getData(detector_ocd, ys[,i]- mean_est)
 
-              detector_mei <- ocd::getData(detector_mei, ys[,i])
+              detector_mei <- ocd::getData(detector_mei, ys[,i]- mean_est)
 
-              detector_xs <- ocd::getData(detector_xs, ys[,i])
+              detector_xs <- ocd::getData(detector_xs, ys[,i]- mean_est)
 
-              detector_chan <- ocd::getData(detector_chan, ys[,i])
+              detector_chan <- ocd::getData(detector_chan, ys[,i] - mean_est)
             }
 
           }
