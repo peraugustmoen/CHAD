@@ -31,6 +31,7 @@ MC_ocd_FA <- function(dim, false_alarm_prob, N, beta=1, sparsity='auto', MC_reps
   return(th)
 }
 
+
 MC_Mei_FA <- function(dim, false_alarm_prob, N, b=beta/sqrt(dim), MC_reps){
   peak_stat <- matrix(0, MC_reps, 2)
   colnames(peak_stat) <- c('max','sum')
@@ -110,6 +111,8 @@ MC_Chan <- function(dim, false_alarm_prob, N,  p0=1/sqrt(dim), w=200,
   th <- quantile(sort(peak_stat), qq)
   return(th)
 }
+
+
 
 # OCD penalty
 p = 100
@@ -248,3 +251,6 @@ plot(times) #helt rått
 points(times_ocd,col=2)
 
 plot(1:n, sqrt(2*log(exp(1)*p*log((1:n + 20))/4^2)))
+
+
+

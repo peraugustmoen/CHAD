@@ -1,4 +1,4 @@
-####### Simulation study #######
+####### Simulation study for run times #######
 ## ...for the paper 'A general framework for fast online changepoint detection',
 ## Per August Jarval Moen, 2024.
 
@@ -23,8 +23,6 @@ dateandtime = gsub(" ", "--",as.character(Sys.time()))
 dateandtime = gsub(":", ".", dateandtime)
 savedir = file.path(maindir, dateandtime)
 
-load_threshes_dir = ""
-load_results_dir = ""
 
 # Creating subfolder with current time as name:
 if(save){
@@ -38,45 +36,12 @@ if(save){
 
 }
 
-## NOTE:
-#  The working directory (as specified by setwd()) should be a parent
-#  directory of the inst/ folder in which tuning_competing_methods.R
-#  can be found, for instance in the source file directory of the
-#  CHAD package
-
-source("inst/tuning_competing_methods.R")
 
 ## NOTE:
 #  The package 'ocd' must be installed. Uncomment below line if needed:
 #install.packages('ocd')
 
 
-## Global parameters
-# N = 1500 # number of data samples considered
-# chgptloc = round(N/3)
-# num_sim = 1000 # number of iterations in the simulation
-# ps = c(100,1000)
-# sparsities100 = c(1,5,10,100)
-# sparsities1000 = c(1,5,30,1000)
-# thetas = seq(0.0, 4.0, by=0.2)
-# num_methods = 5
-# num_cores = 6
-# MC_reps = 1000
-# false_alarm_prob = 0.05
-# estimate_mean = FALSE
-# estimate_mean_until = 0
-
-# testing
-
-num_sim = 5 # number of iterations in the simulation
-num_methods = 5
-estimate_mean = FALSE
-estimate_mean_until = round(chgptloc/2)
-constant_penalty = TRUE
-
-if(!estimate_mean){
-  estimate_mean_until=0
-}
 
 
 
@@ -87,137 +52,510 @@ if(!estimate_mean){
 #   4. XS
 #   5. Chan
 
+## Global params
+num_sim_n = 200 # number of iterations for the simulation varying n
+num_sim_p = 5 # number of iterations for the simulation varying n
+num_methods = 5
+estimate_mean = FALSE
+estimate_mean_until = 0
+constant_penalty = TRUE
+
+num_bins = 25
+if(!estimate_mean){
+  estimate_mean_until=0
+}
 
 
 ### Simulation for N
-N = 500 # number of data samples considered
-p = 100
-binlength = N / 100
+{
+N = 5000 # max number of data samples considered
+p_const = 8
+binlength_N = N / num_bins
 
-runtimes_n = matrix(NA, nrow = num_methods, ncol = N / binlength)
+runtimes_n = matrix(0, nrow = num_methods, ncol = N / binlength_N)
+memory_n = matrix(0, nrow = num_methods, ncol = N / binlength_N)
 
-for (v in 1:num_sim) {
-  ys = matrix(rnorm(N*p), nrow = p, ncol = N)
-  detector = CHAD(p, method = "mean", leading_constant = rep(100000,2),
+for (v in 1:num_sim_n) {
+  cat("v = ", v, "\n")
+  ys = matrix(rnorm(N*p_const), nrow = p_const, ncol = N)
+  detector = CHAD(p_const, method = "mean", leading_constant = rep(80000,2),
                   constant_penalty=constant_penalty,estimate_mean = estimate_mean)
-  detector_ocd <- ocd::ChangepointDetector(dim=p, method='ocd',thresh=rep(100000,3))
-  detector_mei <- ocd::ChangepointDetector(dim=p, method='Mei',thresh=rep(100000,2))
-  detector_xs <- ocd::ChangepointDetector(dim=p, method='XS',thresh=100000)
-  detector_chan <- ocd::ChangepointDetector(dim=p, method='Chan',thresh=100000)
+  detector_ocd <- ocd::ChangepointDetector(dim=p_const, method='ocd',thresh=rep(80000,3))
+  detector_mei <- ocd::ChangepointDetector(dim=p_const, method='Mei',thresh=rep(80000,2))
+  detector_xs <- ocd::ChangepointDetector(dim=p_const, method='XS',thresh=80000)
+  detector_chan <- ocd::ChangepointDetector(dim=p_const, method='Chan',thresh=80000)
 
+  detectors = list()
+  detectors[[1]] = detector
+  detectors[[2]] = detector_ocd
+  detectors[[3]] = detector_mei
+  detectors[[4]] = detector_xs
+  detectors[[5]] = detector_chan
 
   for (m in 1:num_methods) {
+    #cat("m = ", m, "\n")
     for (j in 1:dim(runtimes_n)[2]) {
       ## start timing
-      for (i in ((j-1)*binlength + 1):(j*binlength)){
+      startt = proc.time()
+      for (i in ((j-1)*binlength_N + 1):(j*binlength_N)){
         if (m==1){
-          detectors[[v]] <-getData(detectors[[v]], ys[,i])
+          detectors[[m]] <-getData(detectors[[m]], ys[,i])
         }else{
-          detectors[[v]] <-ocd::getData(detectors[[v]], ys[,i])
+          detectors[[m]] <-ocd::getData(detectors[[m]], ys[,i])
         }
 
       }
-      ## end timing
+      endd = proc.time()
+      runtimes_n[m, j] = runtimes_n[m, j]+  (endd - startt)[3] / num_sim_n / binlength_N
+      memory_n[m,j] = memory_n[m,j] + object.size(detectors[[m]]) / num_sim_n
+
     }
 
   }
 
-
 }
 
+# convert to milliseconds:
+runtimes_n = runtimes_n * 800
 
-results <- provideDimnames(results , sep = "_", base = list("p", "sparsity", "theta", "method", "iteration"))
+# convert to kB:
+memory_n = memory_n / 824
 
-results[1,3,4,,]-chgptloc
+num_obs_vector = 1:(dim(runtimes_n)[2])*binlength_N
 
-meanabove = function(v) mean(v[v>0])
+if(save){
+  saveRDS(runtimes_n, file=sprintf("%s/runtimes_n.RDA", datadir))
+  saveRDS(memory_n, file=sprintf("%s/memory_n.RDA", datadir))
+  saveRDS(num_obs_vector, file=sprintf("%s/num_obs_vector.RDA", datadir))
+}
+}
 
-s_ind = 4
-p_ind = 1
+## Simulation for p
+{
+  n_const= 500 # number of data samples considered
+  P = 200 # max value of p
+  binlength_P = P / num_bins
 
-plot(thetas,apply(results[p_ind,s_ind,,1,]-chgptloc, 1, meanabove),type="l"  )
-lines(thetas,apply(results[p_ind,s_ind,,2,]-chgptloc, 1, meanabove),type="l" ,col=2 )
-lines(thetas,apply(results[p_ind,s_ind,,3,]-chgptloc, 1, meanabove),type="l" ,col=3 )
-lines(thetas,apply(results[p_ind,s_ind,,4,]-chgptloc, 1, meanabove),type="l" ,col=4 )
-lines(thetas,apply(results[p_ind,s_ind,,5,]-chgptloc, 1, meanabove),type="l" ,col=5 )
+  runtimes_p = matrix(0, nrow = num_methods, ncol = P / binlength_P)
+  memory_p = matrix(0, nrow = num_methods, ncol = P / binlength_P)
+
+  for (v in 1:num_sim_p) {
+    cat("v = ", v, "\n")
+    for (j in 1:dim(runtimes_p)[2]) {
+      p = binlength_P*j
+      cat("p = ", p, "\n")
+      ys = matrix(rnorm(2*n_const*p), nrow = p, ncol = 2*n_const)
+      detector = CHAD(p, method = "mean", leading_constant = rep(80000,2),
+                      constant_penalty=constant_penalty,estimate_mean = estimate_mean)
+      detector_ocd <- ocd::ChangepointDetector(dim=p, method='ocd',thresh=rep(80000,3))
+      detector_mei <- ocd::ChangepointDetector(dim=p, method='Mei',thresh=rep(80000,2))
+      detector_xs <- ocd::ChangepointDetector(dim=p, method='XS',thresh=80000)
+      detector_chan <- ocd::ChangepointDetector(dim=p, method='Chan',thresh=80000)
+
+      detectors = list()
+      detectors[[1]] = detector
+      detectors[[2]] = detector_ocd
+      detectors[[3]] = detector_mei
+      detectors[[4]] = detector_xs
+      detectors[[5]] = detector_chan
+
+      stopn = n_const
+
+      ## process the first n_const - 1 data points
+      for (m in 1:num_methods) {
+        for (i in 1:stopn) {
+          if (m==1){
+            detectors[[m]] <-getData(detectors[[m]], ys[,i])
+          }else{
+            detectors[[m]] <-ocd::getData(detectors[[m]], ys[,i])
+          }
+        }
+
+      }
+
+      ## process data point and take average over the time
+
+      for (m in 1:num_methods) {
+        startt = proc.time()
+        for (i in (stopn+1):(2*n_const)) {
+          if (m==1){
+            detectors[[m]] <-getData(detectors[[m]], ys[,i])
+          }else{
+            detectors[[m]] <-ocd::getData(detectors[[m]], ys[,i])
+          }
+        }
+        endd = proc.time()
+        runtimes_p[m, j] = runtimes_p[m, j]+  (endd - startt)[3] / num_sim_p / n_const
+        memory_p[m,j] = memory_p[m,j] + object.size(detectors[[m]]) / num_sim_p
+
+      }
 
 
+    }
+
+
+
+
+  }
+
+  # convert to milliseconds:
+  runtimes_p = runtimes_p * 800
+
+  # convert to Mb:
+  memory_p = memory_p / 824
+
+  p_vector = 1:(dim(runtimes_p)[2])*binlength_P
+
+  if(save){
+    saveRDS(runtimes_p, file=sprintf("%s/runtimes_p.RDA", datadir))
+    saveRDS(memory_p, file=sprintf("%s/memory_p.RDA", datadir))
+    saveRDS(p_vector, file=sprintf("%s/p_vector.RDA", datadir))
+  }
+}
 
 
 
 
 ## Plotting
-p_ind = 1
-lenn = length(apply(results[p_ind,s_ind,,1,]-chgptloc, 1, meanabove))
-plots = list()
-for (i in 1:length(sparsities100)) {
-  s_ind = i
-  plotdata <- data.frame(
-    x = thetas,
-    y = c(apply(results[p_ind,s_ind,,1,]-chgptloc, 1, meanabove),
-          apply(results[p_ind,s_ind,,2,]-chgptloc, 1, meanabove),
-          apply(results[p_ind,s_ind,,3,]-chgptloc, 1, meanabove),
-          apply(results[p_ind,s_ind,,4,]-chgptloc, 1, meanabove),
-          apply(results[p_ind,s_ind,,5,]-chgptloc, 1, meanabove)),
-    Method = factor(c(rep("CHAD", lenn), rep("ocd", lenn), rep("Mei",lenn), rep("XS", lenn),
-                      rep("Chan",lenn)))
 
-  )
-  if(p_ind == 1){
-    ss = sparsities100[i]
-  }else{ss = sparsities1000[i]}
+# first, run time dependence on sample size:
+plotdata1 <- data.frame(
+  x = num_obs_vector,
+  y = c(t(runtimes_n)),
+  Method = factor(c(rep("CHAD", N/binlength_N), rep("ocd", N/binlength_N), rep("Mei",N/binlength_N), rep("XS", N/binlength_N),
+                    rep("Chan",N/binlength_N)))
 
-  plot_base <- ggplot(data = plotdata, aes(x = x, y = y, color = Method, linetype = Method)) +
-    geom_line() +              # Plot lines
-    scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
-    scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
-    theme_bw() +               # Add theme_bw()
-    theme(legend.position = "right") +
-    scale_y_continuous(limits = c(0,N - chgptloc)) +
-    ggtitle(bquote(s == .(ss))) +
-    theme(plot.title = element_text(hjust = 0.5))+
-    ylab("Detection delay") +
-    xlab(bquote(phi)) +
-    theme(legend.title = element_blank())
+)
 
 
-  if (i %in% c(2,4)) {
-    plot_base <- plot_base + theme(axis.title.y = element_blank(), axis.text.y = element_blank())
-  }
-  if (i %in% c(1,2)) {
-    plot_base <- plot_base + theme(axis.title.x = element_blank(), axis.text.x = element_blank())
-  }
+plot1 <- ggplot(data = plotdata1, aes(x = x, y = y, color = Method, linetype = Method)) +
+  geom_line() +              # Plot lines
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
+  scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
+  theme_bw() +               # Add theme_bw()
+  theme(legend.position = "right") +
+  scale_y_continuous(limits = c(0,0.32)) +
+  #ggtitle(bquote(p == .(p_const))) +
+  #theme(plot.title = element_text(hjust = 0.5))+
+  ylab("Update time (ms)") +
+  theme(legend.title = element_blank())+
+  xlab(bquote(t)) +
+  theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"))
 
-  plots[[i]] = plot_base
-}
-# Combine the plots using patchwork, and share the legend
-combined_plot <- (plots[[1]] + plots[[2]]) / (plots[[3]] + plots[[4]]) +
+plot1
+
+plotdata2 <- data.frame(
+  x = num_obs_vector,
+  y = c(t(memory_n)),
+  Method = factor(c(rep("CHAD", N/binlength_N), rep("ocd", N/binlength_N), rep("Mei",N/binlength_N), rep("XS", N/binlength_N),
+                    rep("Chan",N/binlength_N)))
+
+)
+
+
+plot2 <- ggplot(data = plotdata2, aes(x = x, y = y, color = Method, linetype = Method)) +
+  geom_line() +              # Plot lines
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
+  scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
+  theme_bw() +               # Add theme_bw()
+  theme(legend.position = "right") +
+  scale_y_continuous(limits = c(0,41)) +
+  #theme(plot.title = element_text(hjust = 0.5))+
+  #ggtitle(bquote(t == .(n_const))) +
+  ylab("Memory use (Kb)") +
+  xlab(bquote(t)) +
+  theme(legend.title = element_blank())
+plot2
+
+
+
+# then, run time dependence on p:
+plotdata3 <- data.frame(
+  x = p_vector,
+  y = c(t(runtimes_p)),
+  Method = factor(c(rep("CHAD", P/binlength_P), rep("ocd", P/binlength_P), rep("Mei",P/binlength_P), rep("XS", P/binlength_P),
+                    rep("Chan",P/binlength_P)))
+
+)
+
+
+plot3 <- ggplot(data = plotdata3, aes(x = x, y = y, color = Method, linetype = Method)) +
+  geom_line() +              # Plot lines
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
+  scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
+  theme_bw() +               # Add theme_bw()
+  theme(legend.position = "right") +
+  #ggtitle(bquote(t == .(n_const))) +
+  scale_y_continuous(limits = c(0,3)) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("Update time (ms)") +
+  xlab(bquote(p)) +
+  theme(legend.title = element_blank()) +
+  theme(axis.title.y = element_blank())
+
+plot3
+
+plotdata4 <- data.frame(
+  x = p_vector,
+  y = c(t(memory_p)),
+  Method = factor(c(rep("CHAD", P/binlength_P), rep("ocd", P/binlength_P), rep("Mei",P/binlength_P), rep("XS", P/binlength_P),
+                    rep("Chan",P/binlength_P)))
+
+)
+
+
+plot4 <- ggplot(data = plotdata4, aes(x = x, y = y, color = Method, linetype = Method)) +
+  geom_line() +              # Plot lines
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
+  scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
+  theme_bw() +               # Add theme_bw()
+  theme(legend.position = "right") +
+  scale_y_continuous(limits = c(0,600)) +
+  ylab("Memory use (Kb)") +
+  #scale_y_continuous(limits = c(0,200)) +
+  xlab(bquote(p)) +
+  theme(legend.title = element_blank())+
+  theme(axis.title.y = element_blank())
+plot4
+
+
+
+## combine plots
+combined_plot <- (plot1 + plot3) / (plot2 + plot4) +
   plot_layout(guides = 'collect') &
-  theme(legend.position = "bottom") &
-  plot_annotation(
-    title = "Average detection delay",
-    theme = theme(plot.title = element_text(hjust = 0.5))
-  )
+  theme(legend.position = "bottom")
+  #plot_annotation(
+  #  title = "Computational costs",
+  #  theme = theme(plot.title = element_text(hjust = 0.5))
+  #)
 combined_plot
 
+if(save){
+  ggsave(filename = sprintf("%s/plot1.eps", plotdir),
+         plot = plot1,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/plot1.pdf", plotdir),
+         plot = plot1,
+         device = "pdf",
+         width = 8,
+         height = 8)
+
+  ggsave(filename = sprintf("%s/plot2.eps", plotdir),
+         plot = plot2,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/plot2.pdf", plotdir),
+         plot = plot2,
+         device = "pdf",
+         width = 8,
+         height = 8)
+
+  ggsave(filename = sprintf("%s/plot3.eps", plotdir),
+         plot = plot3,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/plot3.pdf", plotdir),
+         plot = plot3,
+         device = "pdf",
+         width = 8,
+         height = 8)
+
+  ggsave(filename = sprintf("%s/plot4.eps", plotdir),
+         plot = plot4,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/plot4.pdf", plotdir),
+         plot = plot4,
+         device = "pdf",
+         width = 8,
+         height = 8)
+
+  ggsave(filename = sprintf("%s/combined_runtime.eps", plotdir),
+         plot = combined_plot,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/combined_runtime.pdf", plotdir),
+         plot = combined_plot,
+         device = "pdf",
+         width = 8,
+         height = 8)
+}
 
 
 
+## Full plots, for supplementary material, where the range of the y axis
+## is larger
+
+plotdata1 <- data.frame(
+  x = num_obs_vector,
+  y = c(t(runtimes_n)),
+  Method = factor(c(rep("CHAD", N/binlength_N), rep("ocd", N/binlength_N), rep("Mei",N/binlength_N), rep("XS", N/binlength_N),
+                    rep("Chan",N/binlength_N)))
+
+)
+
+
+plot1 <- ggplot(data = plotdata1, aes(x = x, y = y, color = Method, linetype = Method)) +
+  geom_line() +              # Plot lines
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
+  scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
+  theme_bw() +               # Add theme_bw()
+  theme(legend.position = "right") +
+  scale_y_continuous(limits = c(0,0.32)) +
+  #ggtitle(bquote(p == .(p_const))) +
+  #theme(plot.title = element_text(hjust = 0.5))+
+  ylab("Update time (ms)") +
+  theme(legend.title = element_blank())+
+  xlab(bquote(t))
+
+plot1
+
+plotdata2 <- data.frame(
+  x = num_obs_vector,
+  y = c(t(memory_n)),
+  Method = factor(c(rep("CHAD", N/binlength_N), rep("ocd", N/binlength_N), rep("Mei",N/binlength_N), rep("XS", N/binlength_N),
+                    rep("Chan",N/binlength_N)))
+
+)
+
+
+plot2 <- ggplot(data = plotdata2, aes(x = x, y = y, color = Method, linetype = Method)) +
+  geom_line() +              # Plot lines
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
+  scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
+  theme_bw() +               # Add theme_bw()
+  theme(legend.position = "right") +
+  scale_y_continuous(limits = c(0,41)) +
+  #theme(plot.title = element_text(hjust = 0.5))+
+  #ggtitle(bquote(t == .(n_const))) +
+  ylab("Memory use (Kb)") +
+  xlab(bquote(t)) +
+  theme(legend.title = element_blank())
+plot2
 
 
 
+# then, run time dependence on p:
+plotdata3 <- data.frame(
+  x = p_vector,
+  y = c(t(runtimes_p)),
+  Method = factor(c(rep("CHAD", P/binlength_P), rep("ocd", P/binlength_P), rep("Mei",P/binlength_P), rep("XS", P/binlength_P),
+                    rep("Chan",P/binlength_P)))
+
+)
+
+
+plot3 <- ggplot(data = plotdata3, aes(x = x, y = y, color = Method, linetype = Method)) +
+  geom_line() +              # Plot lines
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
+  scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
+  theme_bw() +               # Add theme_bw()
+  theme(legend.position = "right") +
+  #ggtitle(bquote(t == .(n_const))) +
+  scale_y_continuous(limits = c(0,max(plotdata3$y))) +
+  theme(plot.title = element_text(hjust = 0.5))+
+  ylab("Update time (ms)") +
+  xlab(bquote(p)) +
+  theme(legend.title = element_blank()) +
+  theme(axis.title.y = element_blank())
+
+plot3
+
+plotdata4 <- data.frame(
+  x = p_vector,
+  y = c(t(memory_p)),
+  Method = factor(c(rep("CHAD", P/binlength_P), rep("ocd", P/binlength_P), rep("Mei",P/binlength_P), rep("XS", P/binlength_P),
+                    rep("Chan",P/binlength_P)))
+
+)
+
+
+plot4 <- ggplot(data = plotdata4, aes(x = x, y = y, color = Method, linetype = Method)) +
+  geom_line() +              # Plot lines
+  scale_color_manual(values = c("red", "blue", "green", "purple", "orange")) + # Custom colors
+  scale_linetype_manual(values = c("solid", "dashed", "longdash", "dotdash", "twodash")) + # Custom line types
+  theme_bw() +               # Add theme_bw()
+  theme(legend.position = "right") +
+  scale_y_continuous(limits = c(0,max(plotdata4$y)))+
+  ylab("Memory use (Kb)") +
+  #scale_y_continuous(limits = c(0,200)) +
+  xlab(bquote(p)) +
+  theme(legend.title = element_blank())+
+  theme(axis.title.y = element_blank())
+plot4
 
 
 
+## combine plots
+combined_plot <- (plot1 + plot3) / (plot2 + plot4) +
+  plot_layout(guides = 'collect') &
+  theme(legend.position = "bottom")
+#plot_annotation(
+#  title = "Computational costs",
+#  theme = theme(plot.title = element_text(hjust = 0.5))
+#)
+combined_plot
 
+if(save){
+  ggsave(filename = sprintf("%s/plot1_extended.eps", plotdir),
+         plot = plot1,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/plot1_extended.pdf", plotdir),
+         plot = plot1,
+         device = "pdf",
+         width = 8,
+         height = 8)
 
-## Array of method outputs
-## Dimensions: [p, sparsity, theta, method, iteration]
-outputs = array(NA, dim = c(length(ps), length(sparsities100), length(thetas),
-                            num_methods, num_sim))
+  ggsave(filename = sprintf("%s/plot2_extended.eps", plotdir),
+         plot = plot2,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/plot2_extended.pdf", plotdir),
+         plot = plot2,
+         device = "pdf",
+         width = 8,
+         height = 8)
 
+  ggsave(filename = sprintf("%s/plot3_extended.eps", plotdir),
+         plot = plot3,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/plot3_extended.pdf", plotdir),
+         plot = plot3,
+         device = "pdf",
+         width = 8,
+         height = 8)
 
-#### Step 3: Simulation study investigating computational performance
+  ggsave(filename = sprintf("%s/plot4_extended.eps", plotdir),
+         plot = plot4,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/plot4_extended.pdf", plotdir),
+         plot = plot4,
+         device = "pdf",
+         width = 8,
+         height = 8)
 
-# use object.size()
+  ggsave(filename = sprintf("%s/combined_runtime_extended.eps", plotdir),
+         plot = combined_plot,
+         device = "eps",
+         width = 8,
+         height = 8)
+  ggsave(filename = sprintf("%s/combined_runtime_extended.pdf", plotdir),
+         plot = combined_plot,
+         device = "pdf",
+         width = 8,
+         height = 8)
+}
 
