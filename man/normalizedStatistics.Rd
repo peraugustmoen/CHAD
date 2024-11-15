@@ -3,7 +3,7 @@
 \name{normalizedStatistics}
 \alias{normalizedStatistics}
 \title{Compute maximum ratio between the test statistic(s) divided by the
-penalty function(s)}
+penalty function(s) / critical values(s)}
 \usage{
 normalizedStatistics(detector)
 }
@@ -16,5 +16,5 @@ respective thresholds.
 }
 \description{
 Compute maximum ratio between the test statistic(s) divided by the
-penalty function(s)
+penalty function(s) / critical values(s)
 }

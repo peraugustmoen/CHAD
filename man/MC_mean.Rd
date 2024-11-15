@@ -26,6 +26,9 @@ function do not grow with the sample size.}
 
 \item{N}{maximum number of observed data points}
 
+\item{estimate_mean}{Boolean indicating whether the pre-change mean should
+be estimated, or assumed to be zero}
+
 \item{seed}{seed for the RNG}
 }
 \value{

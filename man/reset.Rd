@@ -18,7 +18,7 @@ reset(detector)
 \item{detector}{Object of class 'CHAD'}
 }
 \value{
-Updated object \code{detector}
+Updated object `detector`
 
 Updated object \code{detector}
 }

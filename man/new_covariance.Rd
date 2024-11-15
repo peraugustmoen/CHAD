@@ -9,7 +9,7 @@ new_covariance(p, leading_constant, estimate_mean, constant_penalty)
 \arguments{
 \item{p}{Data dimension}
 
-\item{leading_constant}{A numeric vector of length 1}
+\item{leading_constant}{A single numeric value}
 }
 \value{
 An object of subclass 'covarianceDetector' of class 'CHAD'
@@ -19,11 +19,13 @@ Constructor of subclass 'covarianceDetector' of class 'CHAD'
 }
 \details{
 Implements the test statistic of Moen (2024) for dense
-changes in covariance online
+changes in covariance
 }
 \examples{
-detector <- new_covariance(p=100, leading_const = c(2),
-            estimate_mean = TRUE, constant_penalty = FALSE)
+detector <- new_covariance(
+  p = 100, leading_constant = c(2),
+  estimate_mean = TRUE, constant_penalty = FALSE
+)
 }
 \references{
 \itemize{

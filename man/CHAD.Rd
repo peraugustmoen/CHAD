@@ -19,13 +19,14 @@ CHAD(
 \arguments{
 \item{p}{Dimension of the data}
 
-\item{method}{Test statistic to be used, either \code{mean} and \code{covariance}.
-See details below}
+\item{method}{Test statistic to be used, either \code{mean} or
+\code{covariance}. See details below}
 
-\item{leading_constant}{A numeric vector specifying the leading constants for the penalty
-functions, or the character string 'MC' for Monte Carlo simulation of these
-If 'MC' is given as input, the \code{false_alarm_prob}, \code{N} and
-\code{MC_reps} should be specified}
+\item{leading_constant}{A numeric vector specifying the leading constants for
+the penalty functions, or the character string 'MC' for Monte Carlo
+simulation of these.
+If 'MC' is given as input, the \code{false_alarm_prob},
+\code{N} and \code{MC_reps} should be specified}
 
 \item{baseline_sd}{A numeric vector specifying the baseline standard error
 for each coordinate of the data. Only applicable for changes in mean}
@@ -33,10 +34,10 @@ for each coordinate of the data. Only applicable for changes in mean}
 \item{estimate_mean}{Boolean indicating whether mean-centering should be
 performed. Only applicable to changes in covariance}
 
-\item{constant_penalty}{Boolean indicating whether leading constants and thresholds
-should depend on the number of samples}
+\item{constant_penalty}{Boolean indicating whether leading constants and}
 
-\item{false_alarm_prob}{False alarm probability for MC simulations.
+\item{false_alarm_prob}{False alarm probability for MC simulations (between 0 and 1).
+Only required when \code{leading_constant='MC'}
 Only required when \code{leading_constant='MC'}}
 
 \item{MC_reps}{Number of Monte Carlo repetitions to estimate the
@@ -47,34 +48,39 @@ Only required when \code{leading_constant='MC'}}
 Only required when \code{leading_constant='MC'}}
 }
 \value{
-An object of class 'CHAD'. It contains the following attributes:
+An object of class 'CHAD' with the following attributes:
 \itemize{
-\item class - Class and subclass
-\item p - data dimension
-\item method - which method to used for online changepoint detection
-\item leading_constant - a vector of leading constant(s) for the penalty
-function(s)
-\item n_obs - number of currently monitored observations
-\item n_obs_tot - number of observations processed in total
-\item baseline_sd - vector of standard deviations
-\item statistics - a vector of test statistics.
-\item overall_max_statistics - vector of largest test statistics recorded
-\item allstats - a list of various auxiliary statistics
-\item constant_penalty - boolean indicating whether penalties and thresholds
-are constant with respect to the sample size
-\item status - either monitoring or changepoint detected}
+\item \code{class} - Class and subclass
+\item \code{p} - Data dimension
+\item \code{method} - Method used for online changepoint detection
+\item \code{leading_constant} - A vector of leading constant(s) for the
+penalty function(s)
+\item \code{n_obs} - Number of currently monitored observations
+\item \code{n_obs_tot} - Number of observations processed in total
+\item \code{baseline_sd} - Vector of standard deviations
+\item \code{statistics} - A vector of test statistics
+\item \code{overall_max_statistics} - Vector of largest test statistics
+recorded
+\item \code{allstats} - A list of various auxiliary statistics
+\item \code{constant_penalty} - Boolean indicating whether penalties and
+thresholds are constant with respect to the sample size
+\item \code{status} - Either monitoring or changepoint detected
+}
 }
 \description{
 Constructor method for the CHAngepoint Detector (CHAD) class
 }
 \details{
-When \cote{method = 'mean'}, the test statistic of Liu et al. (2021) is used
-to test for a changepoint. If \code{method = 'covariance'}, the test statistic
-of Moen (2024) is used.
+When \code{method = 'mean'}, the test statistic of
+Liu et al. (2021) is used to test for a changepoint. If
+\code{method = 'covariance'}, the test statistic of Moen (2024) is used.
 }
 \examples{
-detector_mean <- CHAD(p=100, method='mean', leading_constant = c(2,2))
-detector_covariance <- CHAD(p=100, method = 'covariance', leading_constant=c(2))
+detector_mean <- CHAD(p = 100, method = "mean", leading_constant = c(2, 2))
+detector_covariance <- CHAD(
+  p = 100, method = "covariance",
+  leading_constant = c(2)
+)
 }
 \references{
 \itemize{

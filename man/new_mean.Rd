@@ -19,15 +19,19 @@ data}
 }
 \value{
 An object of subclass 'meanDetector' of class 'CHAD'
-#' @details Uses the test statistic of Liu et al. (2021) to test for a change
-in mean online
 }
 \description{
 Constructor of subclass 'meanDetector' of class 'CHAD'
 }
+\details{
+Uses the test statistic of Liu et al. (2021) to test for a change
+in mean online
+}
 \examples{
-detector <- new_mean(p=100, leading_constant = c(2,2),
-                     constant_penalty = FALSE)
+detector <- new_mean(
+  p = 100, leading_constant = c(2, 2),
+  constant_penalty = FALSE
+)
 }
 \references{
 \itemize{
