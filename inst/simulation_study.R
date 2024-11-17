@@ -247,7 +247,7 @@ if (!identical(load_results_dir, "")) {
                 estimate_mean_until
             }
             for (i in 1:N) {
-              detector <- getData(detector, ys[, i])
+              detector <- CHAD::getData(detector, ys[, i])
 
 
               if (i > estimate_mean_until) {

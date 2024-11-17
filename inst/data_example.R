@@ -127,14 +127,14 @@ counter <- 0
 for (i in 1:N) {
   counter <- counter + 1
   y_new <- as.numeric(dat_diff[i, 2:ncol(dat_diff)])
-  detector <- getData(detector, y_new)
+  detector <- CHAD::getData(detector, y_new)
   if (counter > 1) {
     teststats[i] <- attr(detector, "statistics")
   }
   if (!identical(status(detector), "monitoring")) {
     changepoints <- c(changepoints, i)
     argmax <- c(argmax, attr(detector, "allstats")$argmax)
-    detector <- reset(detector)
+    detector <- CHAD::reset(detector)
     counter <- 0
   }
 }

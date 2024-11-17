@@ -118,7 +118,7 @@ if (!estimate_mean) {
         startt <- proc.time()
         for (i in ((j - 1) * binlength_N + 1):(j * binlength_N)) {
           if (m == 1) {
-            detectors[[m]] <- getData(detectors[[m]], ys[, i])
+            detectors[[m]] <- CHAD::getData(detectors[[m]], ys[, i])
           } else {
             detectors[[m]] <- ocd::getData(detectors[[m]], ys[, i])
           }
@@ -192,7 +192,7 @@ if (!estimate_mean) {
       for (m in 1:num_methods) {
         for (i in 1:stopn) {
           if (m == 1) {
-            detectors[[m]] <- getData(detectors[[m]], ys[, i])
+            detectors[[m]] <- CHAD::getData(detectors[[m]], ys[, i])
           } else {
             detectors[[m]] <- ocd::getData(detectors[[m]], ys[, i])
           }
@@ -205,7 +205,7 @@ if (!estimate_mean) {
         startt <- proc.time()
         for (i in (stopn + 1):(2 * n_const)) {
           if (m == 1) {
-            detectors[[m]] <- getData(detectors[[m]], ys[, i])
+            detectors[[m]] <- CHAD::getData(detectors[[m]], ys[, i])
           } else {
             detectors[[m]] <- ocd::getData(detectors[[m]], ys[, i])
           }
