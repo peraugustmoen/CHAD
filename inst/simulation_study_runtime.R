@@ -2,12 +2,12 @@
 ## ...for the paper 'A general framework for fast online changepoint detection',
 ## Per August Jarval Moen, 2024.
 
+## Install the CHAD package from GitHub:
+# devtools::install_github("peraugustmoen/CHAD")
+
 ## Imports
 library(CHAD)
-
-# install.packages("foreach")
-# install.packages("doParallel")
-# install.packages("abind")
+library(ocd)
 library(foreach)
 library(doSNOW)
 library(abind)
@@ -122,8 +122,10 @@ if (!estimate_mean) {
           }
         }
         endd <- proc.time()
-        runtimes_n[m, j] <- runtimes_n[m, j] + (endd - startt)[3] / num_sim_n / binlength_N
-        memory_n[m, j] <- memory_n[m, j] + object.size(detectors[[m]]) / num_sim_n
+        runtimes_n[m, j] <- runtimes_n[m, j] +
+          (endd - startt)[3] / num_sim_n / binlength_N
+        memory_n[m, j] <- memory_n[m, j] + object.size(detectors[[m]]) /
+          num_sim_n
       }
     }
   }

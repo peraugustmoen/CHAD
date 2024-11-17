@@ -11,6 +11,8 @@ MC_covariance(
   MC_reps,
   N,
   estimate_mean = TRUE,
+  min_prechange_obs = 1,
+  baseline_operatornorm = NA,
   seed = 123
 )
 }
@@ -20,14 +22,22 @@ MC_covariance(
 \item{false_alarm_prob}{desired false alarm probability}
 
 \item{constant_penalty}{If \code{true}, the penalty function does not grow
-with the sample size.}
+with the sample size}
 
 \item{MC_reps}{number of MC iterations}
 
 \item{N}{maximum number of observed data points}
 
 \item{estimate_mean}{Boolean indicating whether mean-centering should be
-performed}
+performed or if the mean of the data is assumed to be zero}
+
+\item{min_prechange_obs}{Minimum number of observations before a candidate
+changepoint location is considered}
+
+\item{baseline_operatornorm}{A numeric value
+specifying the baseline operator norm of the covariance matrix
+for each coordinate of the data. If \code{baseline_operatornorm = NA}, the
+operator norm is estimated in real-time}
 
 \item{seed}{seed for the RNG}
 }

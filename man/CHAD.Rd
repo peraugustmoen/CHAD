@@ -9,8 +9,10 @@ CHAD(
   method = c("mean", "covariance"),
   leading_constant,
   baseline_sd = 1,
+  baseline_operatornorm = NA,
   estimate_mean = TRUE,
   constant_penalty = FALSE,
+  min_prechange_obs = 1,
   false_alarm_prob = 0.05,
   MC_reps = 100,
   N = 1000
@@ -19,26 +21,35 @@ CHAD(
 \arguments{
 \item{p}{Dimension of the data}
 
-\item{method}{Test statistic to be used, either \code{mean} or
-\code{covariance}. See details below}
+\item{method}{Test statistic to be used, either \code{"mean"} or
+\code{"covariance"}. See details below}
 
 \item{leading_constant}{A numeric vector specifying the leading constants for
-the penalty functions, or the character string 'MC' for Monte Carlo
-simulation of these.
-If 'MC' is given as input, the \code{false_alarm_prob},
-\code{N} and \code{MC_reps} need to be specified}
+the penalty function, or the string "MC" for Monte Carlo
+simulation of these
+If "MC" is given as input, the arguments \code{false_alarm_prob},
+\code{N} and \code{MC_reps} are used in the MC simulation}
 
-\item{baseline_sd}{If \code{method = "mean"}, a numeric vector specifying the baseline standard error
-for each coordinate of the data. Only applicable for changes in mean}
+\item{baseline_sd}{If \code{method = "mean"}, a numeric vector specifying
+the baseline standard deviation for each coordinate of the data
+Only applicable when \code{method = "mean"}}
 
-\item{estimate_mean}{Boolean indicating whether mean-centering should be
-performed.}
+\item{baseline_operatornorm}{If \code{method = "covariance"}, a numeric value
+specifying the baseline operator norm of the covariance matrix.
+If \code{baseline_operatornorm = NA}, the operator norm is estimated
+in real-time}
 
-\item{constant_penalty}{Boolean indicating whether leading constants and
-critical values should be constant with respect to the sample size or not}
+\item{estimate_mean}{Boolean indicating whether the data should be estimated
+in real time, or taken to be zero}
 
-\item{false_alarm_prob}{False alarm probability for MC simulations (between 0 and 1).
-Only required when \code{leading_constant='MC'}}
+\item{constant_penalty}{Boolean indicating whether critical values (and
+tresholds) should be constant with respect to the sample size}
+
+\item{min_prechange_obs}{Minimum number of of pre-change observations
+required for a candidate changepoint location to be considered}
+
+\item{false_alarm_prob}{False alarm probability for MC simulations
+(between 0 and 1). Only required when \code{leading_constant='MC'}}
 
 \item{MC_reps}{Number of Monte Carlo repetitions to estimate the
 leading constant(s) of the penalty function(s)
@@ -50,20 +61,25 @@ Only required when \code{leading_constant='MC'}}
 \value{
 An object of class 'CHAD' with the following attributes:
 \itemize{
-\item \code{class} - Class and subclass
+\item \code{class} - subclass and class
 \item \code{p} - Data dimension
 \item \code{method} - Method used for online changepoint detection
 \item \code{leading_constant} - A vector of leading constant(s) for the
 penalty function(s)
+\item \code{estimate_mean} - Boolean indicating whether mean estimation
+should be performed
 \item \code{n_obs} - Number of currently monitored observations
 \item \code{n_obs_tot} - Number of observations processed in total
-\item \code{baseline_sd} - Vector of standard deviations
+\item \code{baseline_sd} - Vector of standard deviations (for mean changes)
+\item \code{baseline_operatornorm} - Baseline operator norm of the covariance
+matrix (for covariance changes)
 \item \code{statistics} - A vector of test statistics
-\item \code{overall_max_statistics} - Vector of largest test statistics
-recorded
+\item \code{overall_max_statistics} - Vector of largest statistics
+recorded so far
 \item \code{allstats} - A list of various auxiliary statistics
 \item \code{constant_penalty} - Boolean indicating whether penalties and
 thresholds are constant with respect to the sample size
+\item \code{min_prechange_obs} - Minimum number of pre-change observations
 \item \code{status} - Either monitoring or changepoint detected
 }
 }
@@ -76,7 +92,10 @@ Liu et al. (2021) is used to test for a changepoint. If
 \code{method = 'covariance'}, the test statistic of Moen (2024) is used.
 }
 \examples{
-detector_mean <- CHAD::CHAD(p = 100, method = "mean", leading_constant = c(2, 2))
+detector_mean <- CHAD::CHAD(
+  p = 100, method = "mean",
+  leading_constant = c(2, 2)
+)
 detector_covariance <- CHAD(
   p = 100, method = "covariance",
   leading_constant = c(2)

@@ -63,10 +63,7 @@ mean_penalty_and_threshold <- function(t, p) {
 
   r_values <- nu_as[]
 
-  # used in paper:
-  # r_values[2:length(ss)] = ss[2:length(ss)]*log(exp(1)*p*log(n)/ss[2:length(ss)]^2)+ log(n)
 
-  #used here:
   r_values[2:length(ss)] <- ss[2:length(ss)] *
     log(1 + sqrt(p * log(t)) / ss[2:length(ss)]) + log(t)
 

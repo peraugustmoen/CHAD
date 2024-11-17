@@ -8,6 +8,7 @@ MC_mean(
   p,
   false_alarm_prob,
   constant_penalty,
+  min_prechange_obs = 1,
   MC_reps,
   N,
   estimate_mean = TRUE,
@@ -21,6 +22,9 @@ MC_mean(
 
 \item{constant_penalty}{If \code{true}, the thresholding values and penalty
 function do not grow with the sample size.}
+
+\item{min_prechange_obs}{Minimum number of pre-change observations required
+for a candidate changepoint location to be considered}
 
 \item{MC_reps}{number of MC iterations}
 

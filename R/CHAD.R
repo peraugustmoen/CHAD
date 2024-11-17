@@ -1,30 +1,33 @@
 #' @useDynLib CHAD compute_CUSUM_and_Threshold
 #' @importFrom stats dnorm pnorm quantile rnorm setNames
+#' @importFrom utils read.csv
 
 
 
 #' @title Constructor method for the CHAngepoint Detector (CHAD) class
 #' @param p Dimension of the data
-#' @param method Test statistic to be used, either \code{mean} or
-#' \code{covariance}. See details below
+#' @param method Test statistic to be used, either \code{"mean"} or
+#' \code{"covariance"}. See details below
 #' @param leading_constant A numeric vector specifying the leading constants for
-#' the penalty functions, or the character string 'MC' for Monte Carlo
-#' simulation of these.
-#' If 'MC' is given as input, the \code{false_alarm_prob},
-#' \code{N} and \code{MC_reps} need to be specified
+#' the penalty function, or the string "MC" for Monte Carlo
+#' simulation of these
+#' If "MC" is given as input, the arguments \code{false_alarm_prob},
+#' \code{N} and \code{MC_reps} are used in the MC simulation
 #' @param baseline_sd If \code{method = "mean"}, a numeric vector specifying
-#' the baseline standard error for each coordinate of the data.
-#' Only applicable for changes in mean
+#' the baseline standard deviation for each coordinate of the data
+#' Only applicable when \code{method = "mean"}
 #' @param baseline_operatornorm If \code{method = "covariance"}, a numeric value
-#'  specifying the baseline operator norm of the covariance matrix
-#' for each coordinate of the data. Only applicable for changes in mean
-#' @param estimate_mean Boolean indicating whether mean-centering should be
-#' performed.
-#' @param constant_penalty Boolean indicating whether leading constants and
-#' critical values should be constant with respect to the sample size or not
-#' @param min_prechange_obs Minimum number of observations before a changepoint
-#' @param false_alarm_prob False alarm probability for MC simulations (between 0 and 1).
-#' Only required when \code{leading_constant='MC'}
+#' specifying the baseline operator norm of the covariance matrix.
+#' If \code{baseline_operatornorm = NA}, the operator norm is estimated
+#' in real-time
+#' @param estimate_mean Boolean indicating whether the data should be estimated
+#' in real time, or taken to be zero
+#' @param constant_penalty Boolean indicating whether critical values (and
+#' tresholds) should be constant with respect to the sample size
+#' @param min_prechange_obs Minimum number of of pre-change observations
+#' required for a candidate changepoint location to be considered
+#' @param false_alarm_prob False alarm probability for MC simulations
+#'  (between 0 and 1). Only required when \code{leading_constant='MC'}
 #' @param MC_reps Number of Monte Carlo repetitions to estimate the
 #' leading constant(s) of the penalty function(s)
 #' Only required when \code{leading_constant='MC'}
@@ -32,27 +35,35 @@
 #' Only required when \code{leading_constant='MC'}
 #' @return An object of class 'CHAD' with the following attributes:
 #' \itemize{
-#' \item \code{class} - Class and subclass
+#' \item \code{class} - subclass and class
 #' \item \code{p} - Data dimension
 #' \item \code{method} - Method used for online changepoint detection
 #' \item \code{leading_constant} - A vector of leading constant(s) for the
 #' penalty function(s)
+#' \item \code{estimate_mean} - Boolean indicating whether mean estimation
+#' should be performed
 #' \item \code{n_obs} - Number of currently monitored observations
 #' \item \code{n_obs_tot} - Number of observations processed in total
-#' \item \code{baseline_sd} - Vector of standard deviations
+#' \item \code{baseline_sd} - Vector of standard deviations (for mean changes)
+#' \item \code{baseline_operatornorm} - Baseline operator norm of the covariance
+#' matrix (for covariance changes)
 #' \item \code{statistics} - A vector of test statistics
-#' \item \code{overall_max_statistics} - Vector of largest test statistics
-#' recorded
+#' \item \code{overall_max_statistics} - Vector of largest statistics
+#' recorded so far
 #' \item \code{allstats} - A list of various auxiliary statistics
 #' \item \code{constant_penalty} - Boolean indicating whether penalties and
 #' thresholds are constant with respect to the sample size
+#' \item \code{min_prechange_obs} - Minimum number of pre-change observations
 #' \item \code{status} - Either monitoring or changepoint detected
 #' }
 #' @details When \code{method = 'mean'}, the test statistic of
 #' Liu et al. (2021) is used to test for a changepoint. If
 #' \code{method = 'covariance'}, the test statistic of Moen (2024) is used.
 #' @examples
-#' detector_mean <- CHAD::CHAD(p = 100, method = "mean", leading_constant = c(2, 2))
+#' detector_mean <- CHAD::CHAD(
+#'   p = 100, method = "mean",
+#'   leading_constant = c(2, 2)
+#' )
 #' detector_covariance <- CHAD(
 #'   p = 100, method = "covariance",
 #'   leading_constant = c(2)
@@ -108,7 +119,6 @@ CHAD <- function(p,
       constant_penalty = constant_penalty,
       estimate_mean = estimate_mean,
       min_prechange_obs = min_prechange_obs
-
     ),
     covariance = new_covariance(
       p = p,
@@ -130,18 +140,24 @@ CHAD <- function(p,
 #' penalty function when \eqn{k\leq\sqrt{p\log n}}
 #' @param baseline_sd Baseline standard deviation for each component of the
 #' data
-#' @param estimate_mean Boolean indicating whether mean-centering should be
-#' performed.
 #' @param constant_penalty Boolean indicating whether leading constants and
 #' critical values should be constant with respect to the sample size or not
 #' @param min_prechange_obs Minimum number of observations before a changepoint
+#' @param estimate_mean Boolean indicating whether mean-centering should be
+#' performed or if pre-change mean should be assumed to be zero
 #' @return An object of subclass 'meanDetector' of class 'CHAD'
 #' @details Uses the test statistic of Liu et al. (2021) to test for a change
-#' in mean online
+#' in mean online. The penalty function is given by
+#' \eqn{r(k,p,t) = log(t) + k\log(1 + \sqrt{p\log t}/k)} for
+#' \eqn{k<\sqrt{p\log t}} and \eqn{r(k,p,t) = \sqrt{p\log t} + \log t} for
+#' \eqn{k\geq\sqrt{p\log t}}. The critical values are given by
+#' \eqn{r(k,p,t)} multiplied by the leading constant(s) specified in the
+#' \code{leading_constant} argument.
 #' @examples
 #' detector <- CHAD::new_mean(
-#'   p = 100, leading_constant = c(2, 2), baseline_sd = 1,
-#'   constant_penalty = FALSE, estimate_mean = TRUE
+#'   p = 100, leading_constant = c(7, 6), baseline_sd = 1,
+#'   constant_penalty = FALSE, estimate_mean = TRUE,
+#'   min_prechange_obs = 1
 #' )
 #' @references
 #' \itemize{
@@ -178,19 +194,31 @@ new_mean <- function(p, leading_constant, baseline_sd, constant_penalty,
 
 #' @title Constructor of subclass 'covarianceDetector' of class 'CHAD'
 #' @param p Data dimension
-#' @param leading_constant A single numeric value
+#' @param leading_constant A single numeric value acting
+#'  as the leading constant for the penalty function for the covariance
+#' change detector.
 #' @param estimate_mean Boolean indicating whether mean-centering should be
 #' performed.
 #' @param constant_penalty Boolean indicating whether leading constants and
 #' critical values should be constant with respect to the sample size or not
-#' @param min_prechange_obs Minimum number of observations before a changepoint
+#' @param min_prechange_obs Minimum number of pre-change observations before
+#' a candidate changepoint location is considered
+#' @param baseline_operatornorm A numeric value
+#' specifying the baseline operator norm of the covariance matrix
+#' for each coordinate of the data. If \code{baseline_operatornorm = NA}, the
+#' operator norm is estimated in real-time
 #' @return An object of subclass 'covarianceDetector' of class 'CHAD'
 #' @details Implements the test statistic of Moen (2024) for dense
-#' changes in covariance
+#' changes in covariance. The penalty function is given by
+#' \eqn{h(p,t,g) = \max\left(\frac{p + \log t}{g},
+#' \sqrt{\frac{p + \log t}{g}}\right)}, and the critical values are given by
+#' \eqn{h(p,t,g)} multiplied by the leading constant specified in the
+#' \code{leading_constant} argument.
 #' @examples
 #' detector <- CHAD::new_covariance(
-#'   p = 100, leading_constant = c(2),
-#'   estimate_mean = TRUE, constant_penalty = FALSE
+#'   p = 10, leading_constant = c(5),
+#'   estimate_mean = TRUE, constant_penalty = FALSE,
+#'   baseline_operatornorm = NA, min_prechange_obs = 1
 #' )
 #' @references
 #' \itemize{
@@ -414,17 +442,17 @@ getData.meanDetector <- function(detector, y_new) {
 
   # divide each A by the corresponding penalty value in the r_value vector
   A_scaled <- sweep(Amatrix, 1, r_values, FUN = "/")
-  attr(detector, "allstats")$A_scaled <- A_scaled[,]
+  attr(detector, "allstats")$A_scaled <- A_scaled[, ]
 
-  admissable_g_inds = rep(TRUE, length(new_grid))
-  if(min_prechange_obs(detector) > 1){
-    admissable_g_inds = (n_obs -new_grid) >= min_prechange_obs(detector)
+  admissable_g_inds <- rep(TRUE, length(new_grid))
+  if (min_prechange_obs(detector) > 1) {
+    admissable_g_inds <- (n_obs - new_grid) >= min_prechange_obs(detector)
 
-    if(sum(admissable_g_inds) == 0){
+    if (sum(admissable_g_inds) == 0) {
       return(detector)
     }
-    new_grid = new_grid[admissable_g_inds]
-    A_scaled = A_scaled[,admissable_g_inds]
+    new_grid <- new_grid[admissable_g_inds]
+    A_scaled <- A_scaled[, admissable_g_inds]
   }
 
 
@@ -479,7 +507,8 @@ getData.meanDetector <- function(detector, y_new) {
   return(detector)
 }
 
-#' @describeIn getData Process a new data point for subclass 'covarianceDetector'
+#' @describeIn getData Process a new data point for subclass
+#' "covarianceDetector"
 #' @export
 getData.covarianceDetector <- function(detector, y_new) {
   n_obs <- attr(detector, "n_obs") + 1
@@ -560,7 +589,7 @@ getData.covarianceDetector <- function(detector, y_new) {
   S_t_min_g <- attr(detector, "allstats")$cumsums
   for (i in 1:length(new_grid)) {
     g <- new_grid[i]
-    if( g < min_prechange_obs(detector)){
+    if (g < min_prechange_obs(detector)) {
       teststats[i] <- 0
       next
     }
@@ -581,31 +610,29 @@ getData.covarianceDetector <- function(detector, y_new) {
       Sigmahat_right <- Sigmahat_right - mean_right %*% t(mean_right)
 
       mean_left <-
-        attr(detector, "allstats")$log2cumsums_mean[, floor(log(g, base = 2)) + 1] *
-          2^(-floor(log(g, base = 2)))
+        attr(detector, "allstats")$log2cumsums_mean[
+          ,
+          floor(log(g, base = 2)) + 1
+        ] * 2^(-floor(log(g, base = 2)))
 
       Sigmahat_left <- Sigmahat_left - mean_left %*% t(mean_left)
     }
 
-    # sigmahat2 <- max(c(
-    #   norm(Sigmahat_left, type = "2"),
-    #   norm(Sigmahat_right, type = "2")
-    # ))
-    sigmahat2 = norm(Sigmahat_left, type = "2")
-    pen = 0
+
+    sigmahat2 <- norm(Sigmahat_left, type = "2")
+    pen <- 0
     if (attr(detector, "constant_penalty")) {
       pen <- max((p + log(2)) / g, sqrt((p + log(2)) / g))
     } else {
       pen <- max((p + log(n_obs_tot)) / g, sqrt((p + log(n_obs_tot)) / g))
     }
-    if(is.na(attr(detector, "baseline_operatornorm"))){
+    if (is.na(attr(detector, "baseline_operatornorm"))) {
       teststats[i] <- max(norm(Sigmahat_left - Sigmahat_right, type = "2")) /
         sigmahat2 / pen
-    }else{
+    } else {
       teststats[i] <- max(norm(Sigmahat_left - Sigmahat_right, type = "2")) /
-        attr(detector, "baseline_operatornorm")/ pen
+        attr(detector, "baseline_operatornorm") / pen
     }
-
   }
 
 
@@ -666,7 +693,8 @@ reset.covarianceDetector <- function(detector) {
 #' @param false_alarm_prob Desired false alarm probability (between 0 and 1)
 #' @param constant_penalty If \code{true}, the thresholding values and penalty
 #' function do not grow with the sample size.
-#' @param min_prechange_obs Minimum number of observations before a changepoint
+#' @param min_prechange_obs Minimum number of pre-change observations required
+#' for a candidate changepoint location to be considered
 #' @param MC_reps number of MC iterations
 #' @param N maximum number of observed data points
 #' @param estimate_mean Boolean indicating whether the pre-change mean should
@@ -677,7 +705,7 @@ reset.covarianceDetector <- function(detector) {
 #' @export
 MC_mean <- function(p, false_alarm_prob, constant_penalty,
                     min_prechange_obs = 1, MC_reps, N,
-                    estimate_mean = TRUE,  seed = 123) {
+                    estimate_mean = TRUE, seed = 123) {
   set.seed(seed)
   max_statistics <- matrix(NA, nrow = 2, ncol = MC_reps)
   cat("Running MC simulation for meanDetector\n")
@@ -713,11 +741,16 @@ MC_mean <- function(p, false_alarm_prob, constant_penalty,
 #' @param false_alarm_prob desired false alarm probability
 #' @param constant_penalty If \code{true}, the penalty function does not grow
 #' with the sample size
-#' @param min_prechange_obs Minimum number of observations before a changepoint
 #' @param MC_reps number of MC iterations
 #' @param N maximum number of observed data points
 #' @param estimate_mean Boolean indicating whether mean-centering should be
-#' performed
+#' performed or if the mean of the data is assumed to be zero
+#' @param min_prechange_obs Minimum number of observations before a candidate
+#' changepoint location is considered
+#' @param baseline_operatornorm A numeric value
+#' specifying the baseline operator norm of the covariance matrix
+#' for each coordinate of the data. If \code{baseline_operatornorm = NA}, the
+#' operator norm is estimated in real-time
 #' @param seed seed for the RNG
 #' @return Numerical value of the leading constant for the penalty function
 #' @export

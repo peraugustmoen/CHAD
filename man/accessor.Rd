@@ -6,6 +6,7 @@
 \alias{method}
 \alias{n_obs}
 \alias{n_obs_tot}
+\alias{min_prechange_obs}
 \alias{false_alarm_probability}
 \alias{leading_constant}
 \alias{baseline_sd}
@@ -22,6 +23,8 @@ method(detector)
 n_obs(detector)
 
 n_obs_tot(detector)
+
+min_prechange_obs(detector)
 
 false_alarm_probability(detector)
 

@@ -28,6 +28,7 @@ Function for processing a new data point
 \itemize{
 \item \code{getData(meanDetector)}: Process a new data point for subclass 'meanDetector'
 
-\item \code{getData(covarianceDetector)}: Process a new data point for subclass 'covarianceDetector'
+\item \code{getData(covarianceDetector)}: Process a new data point for subclass
+"covarianceDetector"
 
 }}

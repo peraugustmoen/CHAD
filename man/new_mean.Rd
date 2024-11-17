@@ -4,7 +4,14 @@
 \alias{new_mean}
 \title{Constructor of subclass 'meanDetector' of class 'CHAD'}
 \usage{
-new_mean(p, leading_constant, baseline_sd, constant_penalty, estimate_mean)
+new_mean(
+  p,
+  leading_constant,
+  baseline_sd,
+  constant_penalty,
+  min_prechange_obs,
+  estimate_mean
+)
 }
 \arguments{
 \item{p}{Dimension of the data}
@@ -20,8 +27,10 @@ data}
 \item{constant_penalty}{Boolean indicating whether leading constants and
 critical values should be constant with respect to the sample size or not}
 
+\item{min_prechange_obs}{Minimum number of observations before a changepoint}
+
 \item{estimate_mean}{Boolean indicating whether mean-centering should be
-performed.}
+performed or if pre-change mean should be assumed to be zero}
 }
 \value{
 An object of subclass 'meanDetector' of class 'CHAD'
@@ -31,12 +40,18 @@ Constructor of subclass 'meanDetector' of class 'CHAD'
 }
 \details{
 Uses the test statistic of Liu et al. (2021) to test for a change
-in mean online
+in mean online. The penalty function is given by
+\eqn{r(k,p,t) = log(t) + k\log(1 + \sqrt{p\log t}/k)} for
+\eqn{k<\sqrt{p\log t}} and \eqn{r(k,p,t) = \sqrt{p\log t} + \log t} for
+\eqn{k\geq\sqrt{p\log t}}. The critical values are given by
+\eqn{r(k,p,t)} multiplied by the leading constant(s) specified in the
+\code{leading_constant} argument.
 }
 \examples{
 detector <- CHAD::new_mean(
-  p = 100, leading_constant = c(2, 2), baseline_sd = 1,
-  constant_penalty = FALSE, estimate_mean = TRUE
+  p = 100, leading_constant = c(7, 6), baseline_sd = 1,
+  constant_penalty = FALSE, estimate_mean = TRUE,
+  min_prechange_obs = 1
 )
 }
 \references{

@@ -51,7 +51,9 @@ if (save) {
 #  can be found, for instance in the source file directory of the
 #  CHAD package
 
-source("inst/tuning_competing_methods.R")
+source(system.file("tuning_competing_methods.R",
+                   package = "CHAD"))
+
 
 
 

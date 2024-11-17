@@ -4,18 +4,35 @@
 \alias{new_covariance}
 \title{Constructor of subclass 'covarianceDetector' of class 'CHAD'}
 \usage{
-new_covariance(p, leading_constant, estimate_mean, constant_penalty)
+new_covariance(
+  p,
+  leading_constant,
+  estimate_mean,
+  constant_penalty,
+  min_prechange_obs,
+  baseline_operatornorm
+)
 }
 \arguments{
 \item{p}{Data dimension}
 
-\item{leading_constant}{A single numeric value}
+\item{leading_constant}{A single numeric value acting
+ as the leading constant for the penalty function for the covariance
+change detector.}
 
 \item{estimate_mean}{Boolean indicating whether mean-centering should be
 performed.}
 
 \item{constant_penalty}{Boolean indicating whether leading constants and
 critical values should be constant with respect to the sample size or not}
+
+\item{min_prechange_obs}{Minimum number of pre-change observations before
+a candidate changepoint location is considered}
+
+\item{baseline_operatornorm}{A numeric value
+specifying the baseline operator norm of the covariance matrix
+for each coordinate of the data. If \code{baseline_operatornorm = NA}, the
+operator norm is estimated in real-time}
 }
 \value{
 An object of subclass 'covarianceDetector' of class 'CHAD'
@@ -25,12 +42,17 @@ Constructor of subclass 'covarianceDetector' of class 'CHAD'
 }
 \details{
 Implements the test statistic of Moen (2024) for dense
-changes in covariance
+changes in covariance. The penalty function is given by
+\eqn{h(p,t,g) = \max\left(\frac{p + \log t}{g},
+\sqrt{\frac{p + \log t}{g}}\right)}, and the critical values are given by
+\eqn{h(p,t,g)} multiplied by the leading constant specified in the
+\code{leading_constant} argument.
 }
 \examples{
 detector <- CHAD::new_covariance(
-  p = 100, leading_constant = c(2),
-  estimate_mean = TRUE, constant_penalty = FALSE
+  p = 10, leading_constant = c(5),
+  estimate_mean = TRUE, constant_penalty = FALSE,
+  baseline_operatornorm = NA, min_prechange_obs = 1
 )
 }
 \references{
