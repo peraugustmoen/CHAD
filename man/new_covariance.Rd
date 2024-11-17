@@ -10,6 +10,12 @@ new_covariance(p, leading_constant, estimate_mean, constant_penalty)
 \item{p}{Data dimension}
 
 \item{leading_constant}{A single numeric value}
+
+\item{estimate_mean}{Boolean indicating whether mean-centering should be
+performed.}
+
+\item{constant_penalty}{Boolean indicating whether leading constants and
+critical values should be constant with respect to the sample size or not}
 }
 \value{
 An object of subclass 'covarianceDetector' of class 'CHAD'
@@ -22,7 +28,7 @@ Implements the test statistic of Moen (2024) for dense
 changes in covariance
 }
 \examples{
-detector <- new_covariance(
+detector <- CHAD::new_covariance(
   p = 100, leading_constant = c(2),
   estimate_mean = TRUE, constant_penalty = FALSE
 )

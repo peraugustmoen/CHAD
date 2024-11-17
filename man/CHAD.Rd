@@ -13,7 +13,7 @@ CHAD(
   constant_penalty = FALSE,
   false_alarm_prob = 0.05,
   MC_reps = 100,
-  N = 5000
+  N = 1000
 )
 }
 \arguments{
@@ -26,18 +26,18 @@ CHAD(
 the penalty functions, or the character string 'MC' for Monte Carlo
 simulation of these.
 If 'MC' is given as input, the \code{false_alarm_prob},
-\code{N} and \code{MC_reps} should be specified}
+\code{N} and \code{MC_reps} need to be specified}
 
-\item{baseline_sd}{A numeric vector specifying the baseline standard error
+\item{baseline_sd}{If \code{method = "mean"}, a numeric vector specifying the baseline standard error
 for each coordinate of the data. Only applicable for changes in mean}
 
 \item{estimate_mean}{Boolean indicating whether mean-centering should be
-performed. Only applicable to changes in covariance}
+performed.}
 
-\item{constant_penalty}{Boolean indicating whether leading constants and}
+\item{constant_penalty}{Boolean indicating whether leading constants and
+critical values should be constant with respect to the sample size or not}
 
 \item{false_alarm_prob}{False alarm probability for MC simulations (between 0 and 1).
-Only required when \code{leading_constant='MC'}
 Only required when \code{leading_constant='MC'}}
 
 \item{MC_reps}{Number of Monte Carlo repetitions to estimate the
@@ -76,7 +76,7 @@ Liu et al. (2021) is used to test for a changepoint. If
 \code{method = 'covariance'}, the test statistic of Moen (2024) is used.
 }
 \examples{
-detector_mean <- CHAD(p = 100, method = "mean", leading_constant = c(2, 2))
+detector_mean <- CHAD::CHAD(p = 100, method = "mean", leading_constant = c(2, 2))
 detector_covariance <- CHAD(
   p = 100, method = "covariance",
   leading_constant = c(2)

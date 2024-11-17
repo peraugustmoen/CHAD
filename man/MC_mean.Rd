@@ -15,9 +15,9 @@ MC_mean(
 )
 }
 \arguments{
-\item{p}{data dimension}
+\item{p}{Data dimension}
 
-\item{false_alarm_prob}{desired false alarm probability}
+\item{false_alarm_prob}{Desired false alarm probability (between 0 and 1)}
 
 \item{constant_penalty}{If \code{true}, the thresholding values and penalty
 function do not grow with the sample size.}

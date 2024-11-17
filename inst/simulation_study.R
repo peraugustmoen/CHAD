@@ -1,22 +1,18 @@
 ####### Simulation study #######
-## ..for the paper 'A general framework for fast online changepoint detection',
+## for the paper 'A general methodology for fast online changepoint detection',
 ## Per August Jarval Moen, 2024.
 
-## Imports
-# install.packages("foreach")
-# install.packages("doParallel")
-# install.packages("abind")
-# install.packages("ggplot2")
-# install.packages("patchwork")
-# install.packages("devtools")
+## Install the CHAD package from GitHub:
 # devtools::install_github("peraugustmoen/CHAD")
-# install.packages("ocd")
+
+## Imports
 library(CHAD)
 library(foreach)
 library(doSNOW)
 library(abind)
 library(ggplot2)
 library(patchwork)
+library(ocd)
 
 ## Saving options
 save <- TRUE # if results should be saved
@@ -59,21 +55,6 @@ source("inst/tuning_competing_methods.R")
 
 
 
-
-## Global parameters
-# N = 1500 # number of data samples considered
-# chgptloc = round(N/3)
-# num_sim = 1000 # number of iterations in the simulation
-# ps = c(100,1000)
-# sparsities100 = c(1,5,10,100)
-# sparsities1000 = c(1,5,30,1000)
-# thetas = seq(0.0, 4.0, by=0.2)
-# num_methods = 5
-# num_cores = 6
-# MC_reps = 1000
-# false_alarm_prob = 0.05
-# estimate_mean = FALSE
-# estimate_mean_until = 0
 
 # testing
 N <- 300 # number of data samples considered
@@ -344,7 +325,7 @@ lines(thetas, apply(results[p_ind, s_ind, , 5, ] - chgptloc, 1, meanabove),
 
 
 # check false alarm rates:
-rowMeans(results[1, 1, 1, , ] < N) #
+rowMeans(results[1, 1, 1, , ] < N)
 rowMeans(results[2, 1, 1, , ] < N)
 
 

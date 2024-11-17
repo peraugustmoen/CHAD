@@ -16,6 +16,12 @@ penalty function when \eqn{k\leq\sqrt{p\log n}}}
 
 \item{baseline_sd}{Baseline standard deviation for each component of the
 data}
+
+\item{constant_penalty}{Boolean indicating whether leading constants and
+critical values should be constant with respect to the sample size or not}
+
+\item{estimate_mean}{Boolean indicating whether mean-centering should be
+performed.}
 }
 \value{
 An object of subclass 'meanDetector' of class 'CHAD'
@@ -28,9 +34,9 @@ Uses the test statistic of Liu et al. (2021) to test for a change
 in mean online
 }
 \examples{
-detector <- new_mean(
-  p = 100, leading_constant = c(2, 2),
-  constant_penalty = FALSE
+detector <- CHAD::new_mean(
+  p = 100, leading_constant = c(2, 2), baseline_sd = 1,
+  constant_penalty = FALSE, estimate_mean = TRUE
 )
 }
 \references{

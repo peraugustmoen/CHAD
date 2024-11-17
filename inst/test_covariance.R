@@ -1,7 +1,34 @@
 
+# first test p =1
+p = 1
+
+detector = CHAD(p, method = "covariance", leading_constant = 'MC',
+                estimate_mean=FALSE, MC_reps = 100, N = 100,
+                min_prechange_obs = 10, baseline_operatornorm = NA)
+
+n = 12
+ys = matrix(rnorm(n*p), nrow = p, ncol = n)
+
+cumsum = array(NA, dim = c(n, p,p))
+cumsum[1,,] = ys[,1] %*% t(ys[,1])
+
+for (i in 1:n) {
+  detector = getData(detector, ys[,i])
+  if(i>1){
+    cumsum[i,,] = cumsum[i-1,,] + ys[,i] %*% t(ys[,i])
+  }
+}
+all_statistics(detector)
+
+
+# check grid and cumulative sum saving
+
+
+
 p = 10
 
-detector = CHAD(p, method = "covariance", leading_constant = c(2))
+detector = CHAD(p, method = "covariance", leading_constant = "MC",
+                estimate_mean=TRUE, MC_reps = 10)
 
 n = 100
 ys = matrix(rnorm(n*p), nrow = p, ncol = n)
