@@ -620,7 +620,7 @@ getData.covarianceDetector <- function(detector, y_new) {
     }
 
 
-    sigmahat2 <- norm(Sigmahat_left, type = "2")
+
     pen <- 0
     if (attr(detector, "constant_penalty")) {
       pen <- max((p + log(2)) / g, sqrt((p + log(2)) / g))
@@ -628,6 +628,7 @@ getData.covarianceDetector <- function(detector, y_new) {
       pen <- max((p + log(n_obs_tot)) / g, sqrt((p + log(n_obs_tot)) / g))
     }
     if (is.na(attr(detector, "baseline_operatornorm"))) {
+      sigmahat2 <- norm(Sigmahat_left, type = "2")
       teststats[i] <- max(norm(Sigmahat_left - Sigmahat_right, type = "2")) /
         sigmahat2 / pen
     } else {
