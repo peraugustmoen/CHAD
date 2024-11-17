@@ -96,7 +96,8 @@ CHAD <- function(p,
         MC_reps = MC_reps,
         N = N,
         estimate_mean = estimate_mean,
-        min_prechange_obs = min_prechange_obs
+        min_prechange_obs = min_prechange_obs,
+        baseline_sd = baseline_sd
       ),
       covariance = MC_covariance(
         p = p,
