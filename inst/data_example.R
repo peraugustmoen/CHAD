@@ -8,8 +8,10 @@
 
 ## Saving options
 save <- TRUE # if results should be saved
-# Specify directory in which results should be saved:
-maindir <- "" # specify the directory to save the results in
+
+## IMPORTANT! Specify the directory in which results should be saved:
+## (in the maindir variable)
+maindir <- ""
 dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
