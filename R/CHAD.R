@@ -17,7 +17,7 @@
 #' the baseline standard deviation for each coordinate of the data
 #' Only applicable when \code{method = "mean"}
 #' @param baseline_operatornorm If \code{method = "covariance"}, a numeric value
-#' specifying the baseline operator norm of the covariance matrix.
+#' specifying the baseline operator norm of the pre-change covariance matrix.
 #' If \code{baseline_operatornorm = NA}, the operator norm is estimated
 #' in real-time
 #' @param estimate_mean Boolean indicating whether the data should be estimated
@@ -25,7 +25,11 @@
 #' @param constant_penalty Boolean indicating whether critical values (and
 #' tresholds) should be constant with respect to the sample size
 #' @param min_prechange_obs Minimum number of of pre-change observations
-#' required for a candidate changepoint location to be considered
+#' required for a candidate changepoint location to be considered.
+#' Note that if \code{method = "covariance"}, and
+#' \code{baseline_operatornorm = NA}, it is reccomended to set
+#' \code{min_prechange_obs = 10} to avoid highly variable estimates of the
+#' baseline noise level.
 #' @param false_alarm_prob False alarm probability for MC simulations
 #'  (between 0 and 1). Only required when \code{leading_constant='MC'}
 #' @param MC_reps Number of Monte Carlo repetitions to estimate the
