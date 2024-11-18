@@ -142,9 +142,9 @@ for (i in 1:N) {
 dates <- dat_diff$date
 
 cat("Changpoint detected at:\n")
-dates[changepoints]
+dates[changepoints] +1 # plus one since we took a diff
 cat("Candidate changepoint location where the change was flagged:\n")
-dates[changepoints - argmax]
+dates[changepoints - argmax] +1 # plus one since we took a diff
 
 # Plotly plot with vertical lines at changepoints
 plot <- plot_ly(df_long,
@@ -158,7 +158,7 @@ plot <- plot_ly(df_long,
 
 shapes <- list()
 for (i in 1:length(changepoints)) {
-  cp <- dates[changepoints[i]]
+  cp <- dates[changepoints[i]]+1 #plus one since we took a diff
   # print(cp)
   shapes <- append(shapes, list(
     list(
@@ -198,7 +198,7 @@ cp_dates <- dates[changepoints]
 
 for (i in 1:length(cp_dates)) {
   plot <- plot + geom_vline(
-    xintercept = as.numeric(cp_dates[i]),
+    xintercept = as.numeric(cp_dates[i]+1), # plus one since we took a diff
     color = "red", linetype = "dashed"
   )
 }
