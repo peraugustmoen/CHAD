@@ -1,10 +1,10 @@
-The file inst/tuning_competing_methods.R contains code borrowed and modified from the R package 'ocd: High-Dimensional Multiscale Online Changepoint Detection' available at https://CRAN.R-project.org/package=ocd, which is licensed under the GPL-3 license.
+The file inst/tuning_competing_methods.R contains code borrowed and modified from the R package 'ocd: High-Dimensional Multiscale Online Changepoint Detection' available at https://CRAN.R-project.org/package=ocd, which is licensed under the GPL-3 license. The structure of the package CHAD has also been inspired by the structure of the package 'ocd'.
 
 Original authors: Yudong Chen, Tengyao Wang, Richard J. Samworth
 
 Modifications have been performed by Per August Jarval Moen.
 
-This package and all its components are distributed under the terms of the GPL-3 license. A copy of the GPL-3 license is given below. 
+This package and all its components are distributed under the terms of the GPL-3 license. A copy of the GPL-3 license is given below.
 
  GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
