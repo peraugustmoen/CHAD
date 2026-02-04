@@ -1,6 +1,6 @@
 ####### Simulation study for run times #######
-## ...for the paper 'A general framework for fast online changepoint detection',
-## Per August Jarval Moen, 2024.
+## ...for the paper 'A grid-based framework for fast online changepoint detection',
+## Per August Jarval Moen, 2026.
 
 ## Install the CHAD package from GitHub:
 # devtools::install_github("peraugustmoen/CHAD")
@@ -19,7 +19,7 @@ save <- TRUE # if results should be saved
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
-maindir <- ""
+maindir <- "/Users/peraugustmoen/Library/CloudStorage/OneDrive-UniversitetetiOslo/project3/THECODE/simulations"
 dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
@@ -52,6 +52,11 @@ if (save) {
 
 
 
+source(system.file("tuning_competing_methods.R",
+                   package = "CHAD"))
+
+
+
 
 
 ##  Methods included in the simulation study are:
@@ -60,11 +65,12 @@ if (save) {
 #   3. Mei
 #   4. XS
 #   5. Chan
+#   6. mdfocus
 
 ## Global params
-num_sim_n <- 200 # number of iterations for the simulation varying n
-num_sim_p <- 5 # number of iterations for the simulation varying n
-num_methods <- 5
+num_sim_n <- 2 # number of iterations for the simulation varying n
+num_sim_p <- 2 # number of iterations for the simulation varying n
+num_methods <- 6
 estimate_mean <- FALSE
 estimate_mean_until <- 0
 constant_penalty <- TRUE
@@ -77,8 +83,8 @@ if (!estimate_mean) {
 
 ### Simulation for N
 {
-  N <- 5000 # max number of data samples considered
-  p_const <- 8
+  N <- 10000 # max number of data samples considered
+  p_const <- 100
   binlength_N <- N / num_bins
 
   runtimes_n <- matrix(0, nrow = num_methods, ncol = N / binlength_N)
@@ -111,7 +117,7 @@ if (!estimate_mean) {
     detectors[[4]] <- detector_xs
     detectors[[5]] <- detector_chan
 
-    for (m in 1:num_methods) {
+    for (m in 1:5) {
       # cat("m = ", m, "\n")
       for (j in 1:dim(runtimes_n)[2]) {
         ## start timing
@@ -130,13 +136,33 @@ if (!estimate_mean) {
           num_sim_n
       }
     }
+
+    # run mdfocus separately
+    for (j in 1:dim(runtimes_n)[2]) {
+      sparsity_levels <- 2^seq_len(floor(log2(p)))
+      dat = data.frame(t(ys[, 1:(j * binlength_N)]))
+      startt <- proc.time()
+      res = FocusCH_HighDim(dat, get_opt_cost = \(...) get_partial_opt(...,
+                                                                       cost=cost_lr_partial0, which_par = sparsity_levels),
+                            dim_indexes = as.list(1:ncol(dat)),
+                            common_ratio_step = 1.3,
+                            threshold = rep(Inf, 2+length(sparsity_levels)))
+      endd <- proc.time()
+      runtimes_n[6, j] <- runtimes_n[6, j] +
+        (endd - startt)[3] / (j* binlength_N) / num_sim_n
+      memory_n[6, j] <- NA
+    }
+
   }
 
+
+
+
   # convert to milliseconds:
-  runtimes_n <- runtimes_n * 800
+  runtimes_n <- runtimes_n * 1000
 
   # convert to kB:
-  memory_n <- memory_n / 824
+  memory_n <- memory_n / 10000
 
   num_obs_vector <- 1:(dim(runtimes_n)[2]) * binlength_N
 
@@ -146,6 +172,12 @@ if (!estimate_mean) {
     saveRDS(num_obs_vector, file = sprintf("%s/num_obs_vector.RDA", datadir))
   }
 }
+
+matplot(t(runtimes_n), type="l", col = 1:6, lty= 1:6)
+legend("topleft", legend=c("CHAD", "OCD", "Mei", "XS", "Chan", "mdfocus"),
+       col=1:6, lty=1:6)
+
+plot(runtimes_n[6,])
 
 ## Simulation for p
 {
@@ -161,7 +193,7 @@ if (!estimate_mean) {
     for (j in 1:dim(runtimes_p)[2]) {
       p <- binlength_P * j
       cat("p = ", p, "\n")
-      ys <- matrix(rnorm(2 * n_const * p), nrow = p, ncol = 2 * n_const)
+      ys <- matrix(rnorm(n_const * p), nrow = p, ncol = n_const)
       detector <- CHAD(p,
         method = "mean", leading_constant = rep(80000, 2),
         constant_penalty = constant_penalty, estimate_mean = estimate_mean
@@ -186,24 +218,13 @@ if (!estimate_mean) {
       detectors[[4]] <- detector_xs
       detectors[[5]] <- detector_chan
 
-      stopn <- n_const
 
-      ## process the first n_const - 1 data points
-      for (m in 1:num_methods) {
-        for (i in 1:stopn) {
-          if (m == 1) {
-            detectors[[m]] <- CHAD::getData(detectors[[m]], ys[, i])
-          } else {
-            detectors[[m]] <- ocd::getData(detectors[[m]], ys[, i])
-          }
-        }
-      }
 
       ## process data point and take average over the time
 
-      for (m in 1:num_methods) {
+      for (m in 1:5) {
         startt <- proc.time()
-        for (i in (stopn + 1):(2 * n_const)) {
+        for (i in 1:n_const) {
           if (m == 1) {
             detectors[[m]] <- CHAD::getData(detectors[[m]], ys[, i])
           } else {
@@ -216,14 +237,38 @@ if (!estimate_mean) {
         memory_p[m, j] <-
           memory_p[m, j] + object.size(detectors[[m]]) / num_sim_p
       }
+
     }
+
+
+    for (j in 1:dim(runtimes_p)[2]) {
+      p <- binlength_P * j
+      ys <- matrix(rnorm(n_const * p), nrow = p, ncol = n_const)
+      sparsity_levels <- 2^seq_len(floor(log2(p)))
+      dat = data.frame(t(ys))
+      startt <- proc.time()
+      res = FocusCH_HighDim(dat, get_opt_cost = \(...) get_partial_opt(...,
+                                                                       cost=cost_lr_partial0, which_par = sparsity_levels),
+                            dim_indexes = as.list(1:ncol(dat)),
+                            common_ratio_step = 1.3,
+                            threshold = rep(Inf, 2+length(sparsity_levels)))
+      endd <- proc.time()
+      runtimes_p[6, j] <- runtimes_p[6, j] +
+        (endd - startt)[3] / n_const / num_sim_p
+      memory_p[6, j] <- NA
+    }
+
   }
 
+
+
+
+
   # convert to milliseconds:
-  runtimes_p <- runtimes_p * 800
+  runtimes_p <- runtimes_p * 1000
 
   # convert to Mb:
-  memory_p <- memory_p / 824
+  memory_p <- memory_p / 1000
 
   p_vector <- 1:(dim(runtimes_p)[2]) * binlength_P
 
@@ -248,7 +293,8 @@ plotdata1 <- data.frame(
     rep("ocd", N / binlength_N),
     rep("Mei", N / binlength_N),
     rep("XS", N / binlength_N),
-    rep("Chan", N / binlength_N)
+    rep("Chan", N / binlength_N),
+    rep("MdFOCuS", N / binlength_N)
   ))
 )
 
@@ -259,16 +305,16 @@ plot1 <- ggplot(
 ) +
   geom_line() + # Plot lines
   scale_color_manual(values = c(
-    "red", "blue",
-    "green", "purple", "orange"
+    "black", "blue",
+    "green", "purple", "orange", "red"
   )) + # Custom colors
   scale_linetype_manual(values = c(
-    "solid",
-    "dashed", "longdash", "dotdash", "twodash"
+    "solid", "dashed",
+    "longdash", "dotdash", "twodash", "dotted"
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, 0.32)) +
+  scale_y_continuous(limits = c(0, 7.5)) +
   # ggtitle(bquote(p == .(p_const))) +
   # theme(plot.title = element_text(hjust = 0.5))+
   ylab("Update time (ms)") +
@@ -286,7 +332,8 @@ plotdata2 <- data.frame(
     rep("ocd", N / binlength_N),
     rep("Mei", N / binlength_N),
     rep("XS", N / binlength_N),
-    rep("Chan", N / binlength_N)
+    rep("Chan", N / binlength_N),
+    rep("MdFOCuS", N / binlength_N)
   ))
 )
 
@@ -297,12 +344,12 @@ plot2 <- ggplot(
 ) +
   geom_line() + # Plot lines
   scale_color_manual(values = c(
-    "red", "blue",
-    "green", "purple", "orange"
+    "black", "blue",
+    "green", "purple", "orange", "red"
   )) + # Custom colors
   scale_linetype_manual(values = c(
     "solid", "dashed",
-    "longdash", "dotdash", "twodash"
+    "longdash", "dotdash", "twodash", "dotted"
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
@@ -325,7 +372,8 @@ plotdata3 <- data.frame(
     rep("ocd", P / binlength_P),
     rep("Mei", P / binlength_P),
     rep("XS", P / binlength_P),
-    rep("Chan", P / binlength_P)
+    rep("Chan", P / binlength_P),
+    rep("MdFOCuS", P / binlength_P)
   ))
 )
 
@@ -336,17 +384,17 @@ plot3 <- ggplot(
 ) +
   geom_line() + # Plot lines
   scale_color_manual(values = c(
-    "red", "blue",
-    "green", "purple", "orange"
+    "black", "blue",
+    "green", "purple", "orange", "red"
   )) + # Custom colors
   scale_linetype_manual(values = c(
     "solid", "dashed",
-    "longdash", "dotdash", "twodash"
+    "longdash", "dotdash", "twodash", "dotted"
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
   # ggtitle(bquote(t == .(n_const))) +
-  scale_y_continuous(limits = c(0, 3)) +
+  scale_y_continuous(limits = c(0, 7.5)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ylab("Update time (ms)") +
   xlab(bquote(p)) +
@@ -363,7 +411,8 @@ plotdata4 <- data.frame(
     rep("ocd", P / binlength_P),
     rep("Mei", P / binlength_P),
     rep("XS", P / binlength_P),
-    rep("Chan", P / binlength_P)
+    rep("Chan", P / binlength_P),
+    rep("MdFOCuS", P / binlength_P)
   ))
 )
 
@@ -374,12 +423,12 @@ plot4 <- ggplot(
 ) +
   geom_line() + # Plot lines
   scale_color_manual(values = c(
-    "red", "blue",
-    "green", "purple", "orange"
+    "black", "blue",
+    "green", "purple", "orange", "red"
   )) + # Custom colors
   scale_linetype_manual(values = c(
     "solid", "dashed",
-    "longdash", "dotdash", "twodash"
+    "longdash", "dotdash", "twodash", "dotted"
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
@@ -405,152 +454,156 @@ if (save) {
     filename = sprintf("%s/plot1.eps", plotdir),
     plot = plot1,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
     filename = sprintf("%s/plot1.pdf", plotdir),
     plot = plot1,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 
   ggsave(
     filename = sprintf("%s/plot2.eps", plotdir),
     plot = plot2,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
     filename = sprintf("%s/plot2.pdf", plotdir),
     plot = plot2,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 
   ggsave(
     filename = sprintf("%s/plot3.eps", plotdir),
     plot = plot3,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
     filename = sprintf("%s/plot3.pdf", plotdir),
     plot = plot3,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 
   ggsave(
     filename = sprintf("%s/plot4.eps", plotdir),
     plot = plot4,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
     filename = sprintf("%s/plot4.pdf", plotdir),
     plot = plot4,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 
   ggsave(
     filename = sprintf("%s/combined_runtime.eps", plotdir),
     plot = combined_plot,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
     filename = sprintf("%s/combined_runtime.pdf", plotdir),
     plot = combined_plot,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 }
 
 
+######## NORMALIZED PLOTS #############
 
-## Full plots, for supplementary material, where the range of the y axis
-## is larger
+## Plotting
 
-plotdata1 <- data.frame(
+# first, run time dependence on sample size:
+plotdata1_normalized <- data.frame(
   x = num_obs_vector,
-  y = c(t(runtimes_n)),
+  y = c(t(runtimes_n / runtimes_n[,1])),
   Method = factor(c(
     rep("CHAD", N / binlength_N),
     rep("ocd", N / binlength_N),
     rep("Mei", N / binlength_N),
     rep("XS", N / binlength_N),
-    rep("Chan", N / binlength_N)
+    rep("Chan", N / binlength_N),
+    rep("MdFOCuS", N / binlength_N)
   ))
 )
 
 
 plot1 <- ggplot(
-  data = plotdata1,
+  data = plotdata1_normalized,
   aes(x = x, y = y, color = Method, linetype = Method)
 ) +
   geom_line() + # Plot lines
   scale_color_manual(values = c(
-    "red", "blue",
-    "green", "purple", "orange"
+    "black", "blue",
+    "green", "purple", "orange", "red"
   )) + # Custom colors
   scale_linetype_manual(values = c(
     "solid", "dashed",
-    "longdash", "dotdash", "twodash"
+    "longdash", "dotdash", "twodash", "dotted"
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, 0.32)) +
+  scale_y_continuous(limits = c(0, 3.5)) +
   # ggtitle(bquote(p == .(p_const))) +
   # theme(plot.title = element_text(hjust = 0.5))+
-  ylab("Update time (ms)") +
+  ylab("Relative update time") +
   theme(legend.title = element_blank()) +
-  xlab(bquote(t))
+  xlab(bquote(t)) +
+  theme(plot.margin = unit(c(0.1, 0.1, 0.1, 0.1), "cm"))
 
 plot1
 
-plotdata2 <- data.frame(
+plotdata2_normalized <- data.frame(
   x = num_obs_vector,
-  y = c(t(memory_n)),
+  y = c(t(memory_n / memory_n[,1])),
   Method = factor(c(
     rep("CHAD", N / binlength_N),
     rep("ocd", N / binlength_N),
     rep("Mei", N / binlength_N),
     rep("XS", N / binlength_N),
-    rep("Chan", N / binlength_N)
+    rep("Chan", N / binlength_N),
+    rep("MdFOCuS", N / binlength_N)
   ))
 )
 
 
 plot2 <- ggplot(
-  data = plotdata2,
+  data = plotdata2_normalized,
   aes(x = x, y = y, color = Method, linetype = Method)
 ) +
   geom_line() + # Plot lines
   scale_color_manual(values = c(
-    "red", "blue",
-    "green", "purple", "orange"
+    "black", "blue",
+    "green", "purple", "orange", "red"
   )) + # Custom colors
   scale_linetype_manual(values = c(
     "solid", "dashed",
-    "longdash", "dotdash", "twodash"
+    "longdash", "dotdash", "twodash", "dotted"
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, 41)) +
+  scale_y_continuous(limits = c(0, 3)) +
   # theme(plot.title = element_text(hjust = 0.5))+
   # ggtitle(bquote(t == .(n_const))) +
-  ylab("Memory use (Kb)") +
+  ylab("Relative memory use") +
   xlab(bquote(t)) +
   theme(legend.title = element_blank())
 plot2
@@ -558,73 +611,75 @@ plot2
 
 
 # then, run time dependence on p:
-plotdata3 <- data.frame(
+plotdata3_normalized <- data.frame(
   x = p_vector,
-  y = c(t(runtimes_p)),
+  y = c(t(runtimes_p / runtimes_p[,1])),
   Method = factor(c(
     rep("CHAD", P / binlength_P),
     rep("ocd", P / binlength_P),
     rep("Mei", P / binlength_P),
     rep("XS", P / binlength_P),
-    rep("Chan", P / binlength_P)
+    rep("Chan", P / binlength_P),
+    rep("MdFOCuS", P / binlength_P)
   ))
 )
 
 
 plot3 <- ggplot(
-  data = plotdata3,
+  data = plotdata3_normalized,
   aes(x = x, y = y, color = Method, linetype = Method)
 ) +
   geom_line() + # Plot lines
   scale_color_manual(values = c(
-    "red", "blue",
-    "green", "purple", "orange"
+    "black", "blue",
+    "green", "purple", "orange", "red"
   )) + # Custom colors
   scale_linetype_manual(values = c(
     "solid", "dashed",
-    "longdash", "dotdash", "twodash"
+    "longdash", "dotdash", "twodash", "dotted"
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
   # ggtitle(bquote(t == .(n_const))) +
-  scale_y_continuous(limits = c(0, max(plotdata3$y))) +
+  scale_y_continuous(limits = c(0, 25)) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  ylab("Update time (ms)") +
+  ylab("Relative update time") +
   xlab(bquote(p)) +
   theme(legend.title = element_blank()) +
   theme(axis.title.y = element_blank())
 
 plot3
 
-plotdata4 <- data.frame(
+plotdata4_normalized <- data.frame(
   x = p_vector,
-  y = c(t(memory_p)),
+  y = c(t(memory_p / memory_p[,1])),
   Method = factor(c(
     rep("CHAD", P / binlength_P),
     rep("ocd", P / binlength_P),
     rep("Mei", P / binlength_P),
     rep("XS", P / binlength_P),
-    rep("Chan", P / binlength_P)
+    rep("Chan", P / binlength_P),
+    rep("MdFOCuS", P / binlength_P)
   ))
 )
 
 
 plot4 <- ggplot(
-  data = plotdata4,
+  data = plotdata4_normalized,
   aes(x = x, y = y, color = Method, linetype = Method)
 ) +
   geom_line() + # Plot lines
   scale_color_manual(values = c(
-    "red", "blue",
-    "green", "purple", "orange"
+    "black", "blue",
+    "green", "purple", "orange", "red"
   )) + # Custom colors
   scale_linetype_manual(values = c(
     "solid", "dashed",
-    "longdash", "dotdash", "twodash"
+    "longdash", "dotdash", "twodash", "dotted"
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, max(plotdata4$y))) +
+  scale_y_continuous(limits = c(0, 50)) +
   ylab("Memory use (Kb)") +
   # scale_y_continuous(limits = c(0,200)) +
   xlab(bquote(p)) +
@@ -638,85 +693,102 @@ plot4
 combined_plot <- (plot1 + plot3) / (plot2 + plot4) +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
-# plot_annotation(
-#  title = "Computational costs",
-#  theme = theme(plot.title = element_text(hjust = 0.5))
-# )
+
 combined_plot
 
 if (save) {
   ggsave(
-    filename = sprintf("%s/plot1_extended.eps", plotdir),
+    filename = sprintf("%s/plot1_relative.eps", plotdir),
     plot = plot1,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
-    filename = sprintf("%s/plot1_extended.pdf", plotdir),
+    filename = sprintf("%s/plot1_relative.pdf", plotdir),
     plot = plot1,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 
   ggsave(
-    filename = sprintf("%s/plot2_extended.eps", plotdir),
+    filename = sprintf("%s/plot2_relative.eps", plotdir),
     plot = plot2,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
-    filename = sprintf("%s/plot2_extended.pdf", plotdir),
+    filename = sprintf("%s/plot2_relative.pdf", plotdir),
     plot = plot2,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 
   ggsave(
-    filename = sprintf("%s/plot3_extended.eps", plotdir),
+    filename = sprintf("%s/plot3_relative.eps", plotdir),
     plot = plot3,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
-    filename = sprintf("%s/plot3_extended.pdf", plotdir),
+    filename = sprintf("%s/plot3_relative.pdf", plotdir),
     plot = plot3,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 
   ggsave(
-    filename = sprintf("%s/plot4_extended.eps", plotdir),
+    filename = sprintf("%s/plot4_relative.eps", plotdir),
     plot = plot4,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
-    filename = sprintf("%s/plot4_extended.pdf", plotdir),
+    filename = sprintf("%s/plot4_relative.pdf", plotdir),
     plot = plot4,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 
   ggsave(
-    filename = sprintf("%s/combined_runtime_extended.eps", plotdir),
+    filename = sprintf("%s/combined_runtime_relative.eps", plotdir),
     plot = combined_plot,
     device = "eps",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
   ggsave(
-    filename = sprintf("%s/combined_runtime_extended.pdf", plotdir),
+    filename = sprintf("%s/combined_runtime_relative.pdf", plotdir),
     plot = combined_plot,
     device = "pdf",
-    width = 8,
-    height = 8
+    width = 7,
+    height = 5
   )
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

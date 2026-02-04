@@ -14,24 +14,24 @@
 #'   \item{Series.Description}{Date of the observation}
 #'   \item{Australian.Dollar}{Value of one USD in Australian Dollar}
 #'   \item{Euro.Area.Euro}{Value of one USD in Euro}
-#'   \item{New.Zealand.Dollar}{Value of one USD in New Zealand Dollar}
 #'   \item{United.Kingdom.Pound}{Value of one USD in United Kingdom Pound}
-#'   \item{Brazilian.Real}{Value of one USD in Brazilian Real}
 #'   \item{Canadian.Dollar}{Value of one USD in Canadian Dollar}
 #'   \item{Chinese.Yuan}{Value of one USD in Chinese Yuan}
-#'   \item{Danish.Krone}{Value of one USD in Danish Krone}
 #'   \item{Hong.Kong.Dollar}{Value of one USD in Hong Kong Dollar}
-#'   \item{Indian.Rupee}{Value of one USD in Indian Rupee}
 #'   \item{Japanese.Yen}{Value of one USD in Japanese Yen}
+#'   \item{Swedish.Krona}{Value of one USD in Swedish Krona}
+#'   \item{Singapore.Dollar}{Value of one USD in Singapore Dollar}
+#'   \item{Swiss.Franc}{Value of one USD in Swiss Franc}
+#'   \item{New.Zealand.Dollar}{Value of one USD in New Zealand Dollar}
+#'   \item{Brazilian.Real}{Value of one USD in Brazilian Real}
+#'   \item{Danish.Krone}{Value of one USD in Danish Krone}
+#'   \item{Indian.Rupee}{Value of one USD in Indian Rupee}
 #'   \item{South.Korean.Won}{Value of one USD in South Korean Won}
 #'   \item{Malaysian.Ringgit}{Value of one USD in Malaysian Ringgit}
 #'   \item{Mexican.Peso}{Value of one USD in Mexican Peso}
 #'   \item{Norwegian.Krone}{Value of one USD in Norwegian Krone}
-#'   \item{Swedish.Krona}{Value of one USD in Swedish Krona}
 #'   \item{South.African.Rand}{Value of one USD in South African Rand}
-#'   \item{Singapore.Dollar}{Value of one USD in Singapore Dollar}
 #'   \item{Sri.Lankan.Rupee}{Value of one USD in Sri Lankan Rupee}
-#'   \item{Swiss.Franc}{Value of one USD in Swiss Franc}
 #'   \item{Taiwanese.N.T..Dollar}{Value of one USD in Taiwanese N.T. Dollar}
 #'   \item{Thailand.Baht}{Value of one USD in Thailand Baht}
 #'   \item{Venezuelan.Bolivar}{Value of one USD in Venezuelan Bolivar}

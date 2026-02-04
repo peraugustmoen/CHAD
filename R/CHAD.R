@@ -545,8 +545,7 @@ getData.covarianceDetector <- function(detector, y_new) {
   if (n_obs == 1) {
     attr(detector, "allstats")$cumsums <- y_new %*% t(y_new)
     attr(detector, "allstats")$cumsums_mean <- y_new
-    attr(detector, "allstats")$log2cumsums <- y_new %*% t(y_new)
-    attr(detector, "allstats")$log2cumsums_mean <- y_new
+
   } else {
     newinds <- (attr(detector, "grid") + 1) %in% new_grid
     len <- sum(newinds) + 1
@@ -566,20 +565,7 @@ getData.covarianceDetector <- function(detector, y_new) {
     }
     attr(detector, "allstats")$cumsums_mean <- new_cumsums_mean
 
-    # store first log_2(n_obs) cumulative sum as well
-    if (floor(log(n_obs, base = 2)) > floor(log(n_obs - 1, base = 2))) {
-      len <- floor(log(n_obs, base = 2)) + 1
-      newlog2cumsum <- array(NA, dim = c(len, p, p))
-      newlog2cumsum[1:(len - 1), , ] <- attr(detector, "allstats")$log2cumsums
-      newlog2cumsum[len, , ] <- attr(detector, "allstats")$cumsum
-      attr(detector, "allstats")$log2cumsums <- newlog2cumsum
 
-      newlog2cumsum_mean <- matrix(NA, nrow = p, ncol = len)
-      newlog2cumsum_mean[, 1:(len - 1)] <-
-        attr(detector, "allstats")$log2cumsums_mean
-      newlog2cumsum_mean[, len] <- attr(detector, "allstats")$cumsum_mean
-      attr(detector, "allstats")$log2cumsums_mean <- newlog2cumsum_mean
-    }
   }
 
   attr(detector, "grid") <- new_grid
@@ -605,20 +591,15 @@ getData.covarianceDetector <- function(detector, y_new) {
       }
     }
     Sigmahat_right <- (S_t - S_t_min_g[i, , ]) / g
-    Sigmahat_left <-
-      attr(detector, "allstats")$log2cumsums[floor(log(g, base = 2)) + 1, , ] *
-        2^(-floor(log(g, base = 2)))
+    Sigmahat_left <- S_t_min_g[i,,] / (n_obs - g)
+
 
     if (estimate_mean) {
       mean_right <- (attr(detector, "allstats")$cumsum_mean -
         attr(detector, "allstats")$cumsums_mean[, i]) / g
       Sigmahat_right <- Sigmahat_right - mean_right %*% t(mean_right)
 
-      mean_left <-
-        attr(detector, "allstats")$log2cumsums_mean[
-          ,
-          floor(log(g, base = 2)) + 1
-        ] * 2^(-floor(log(g, base = 2)))
+      mean_left <- attr(detector, "allstats")$cumsums_mean[, i] / (n_obs - g)
 
       Sigmahat_left <- Sigmahat_left - mean_left %*% t(mean_left)
     }
@@ -742,7 +723,8 @@ MC_mean <- function(p, false_alarm_prob, constant_penalty,
 
 #' @title MC simulation for covarianceDetector
 #' @description Chooses the leading constant for the penalty function for
-#' the 'covarianceDetector' subclass of 'CHAD'.
+#' the 'covarianceDetector' subclass of 'CHAD'. Data is generated according to
+#' a multivariate normal distribution with identity covariance matrix.
 #' @param p data dimension
 #' @param false_alarm_prob desired false alarm probability
 #' @param constant_penalty If \code{true}, the penalty function does not grow
@@ -789,6 +771,59 @@ MC_covariance <- function(p, false_alarm_prob, constant_penalty, MC_reps, N,
   qq <- 1 - false_alarm_prob
   return(quantile(max_statistics, qq))
 }
+
+#' @title MC simulation for covarianceDetector, heavy tails
+#' @description Chooses the leading constant for the penalty function for
+#' the 'covarianceDetector' subclass of 'CHAD'. Data is generated from a
+#' multivariate t-distribution with 5 degrees of freedom with independent entries.
+#' @param p data dimension
+#' @param false_alarm_prob desired false alarm probability
+#' @param constant_penalty If \code{true}, the penalty function does not grow
+#' with the sample size
+#' @param MC_reps number of MC iterations
+#' @param N maximum number of observed data points
+#' @param estimate_mean Boolean indicating whether mean-centering should be
+#' performed or if the mean of the data is assumed to be zero
+#' @param min_prechange_obs Minimum number of observations before a candidate
+#' changepoint location is considered
+#' @param baseline_operatornorm A numeric value
+#' specifying the baseline operator norm of the covariance matrix
+#' for each coordinate of the data. If \code{baseline_operatornorm = NA}, the
+#' operator norm is estimated in real-time
+#' @param seed seed for the RNG
+#' @return Numerical value of the leading constant for the penalty function
+#' @export
+MC_covariance_heavytail <- function(p, false_alarm_prob, constant_penalty, MC_reps, N,
+                          estimate_mean = TRUE,
+                          min_prechange_obs = 1,
+                          baseline_operatornorm = NA,
+                          seed = 123,
+                          df = 5) {
+  set.seed(seed)
+  max_statistics <- rep(NA, MC_reps)
+  cat("Running MC simulation for covarianceDetector\n")
+  for (j in 1:MC_reps) {
+    if (j %% 100 == 0) {
+      cat("Iteration: ", j, "\n")
+    }
+    detector <- CHAD(p,
+                     method = "covariance", leading_constant = c(100000),
+                     constant_penalty = constant_penalty,
+                     estimate_mean = estimate_mean,
+                     baseline_operatornorm = baseline_operatornorm,
+                     min_prechange_obs = min_prechange_obs
+    )
+    ys <- matrix(rt(N * p, df = df), nrow = p, ncol = N) * sqrt((df-2)/df)
+    for (i in 1:N) {
+      detector <- getData(detector, ys[, i])
+    }
+    max_statistics[j] <- attr(detector, "overall_max_statistics")
+  }
+
+  qq <- 1 - false_alarm_prob
+  return(quantile(max_statistics, qq))
+}
+
 
 #' Printing methods for the 'CHAD' class
 #' @param x object of the 'CHAD' class

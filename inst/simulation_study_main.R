@@ -1,6 +1,9 @@
 ####### Simulation study #######
-## for the paper 'A general methodology for fast online changepoint detection',
-## Per August Jarval Moen, 2024.
+## for the paper 'A grid-based methodology for fast online changepoint detection',
+## Per August Jarval Moen, 2026.
+
+## This simulation is for the setting with known pre-change mean (=0).
+## For unknown pre-change mean, see simulation_study_nonzero.R
 
 ## Install the CHAD package from GitHub:
 # devtools::install_github("peraugustmoen/CHAD")
@@ -15,7 +18,7 @@ library(patchwork)
 library(ocd)
 
 ## Saving options
-save <- TRUE # if results should be saved
+save <- FALSE # results are saved if TRUE
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
@@ -24,8 +27,8 @@ dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
 
-load_threshes_dir <- ""
-load_results_dir <- ""
+load_threshes_dir <- "" # dir if thresholds are already computed and stored
+load_results_dir <- "" # dir if simulation study results are already stored
 
 # Creating subfolder with current time as name:
 if (save) {
@@ -47,11 +50,7 @@ if (save) {
   dir.create(datadir, showWarnings = FALSE)
 }
 
-## NOTE:
-#  The working directory (as specified by setwd()) should be a parent
-#  directory of the inst/ folder in which tuning_competing_methods.R
-#  can be found, for instance in the source file directory of the
-#  CHAD package
+
 
 source(system.file("tuning_competing_methods.R",
                    package = "CHAD"))
@@ -60,17 +59,17 @@ source(system.file("tuning_competing_methods.R",
 
 
 
-# testing
-N <- 300 # number of data samples considered
-chgptloc <- round(N / 3)
-num_sim <- 1000 # number of iterations in the simulation
-ps <- c(100, 1000)
+N <- 50 # length of a single stream
+chgptloc <- round(N / 3) #changepoint location
+num_sim <- 100 # number of iterations in the simulation
+ps <- c(100) # dimensions to be considered
+#ps <- c(100, 1000)
 sparsities100 <- c(1, 5, 10, 100)
 sparsities1000 <- c(1, 5, 30, 1000)
 thetas <- seq(0.0, 8.0, by = 0.4)
-num_methods <- 5
+num_methods <- 6
 num_cores <- 6
-MC_reps <- 1000
+MC_reps <- 1000 # number of MC simulations to choose thresholds
 false_alarm_prob <- 0.05
 estimate_mean <- FALSE
 estimate_mean_until <- round(chgptloc / 2)
@@ -82,8 +81,10 @@ if (!estimate_mean) {
 
 
 ## print parameters to file
+if(save)
 {
   paramfile <- sprintf("%s/parameters.txt", savedir)
+  cat("Simulation with pre-change mean zero KNOWN!\n", file = paramfile, append = TRUE)
   cat("Parameters:\n", file = paramfile, append = TRUE)
   cat("N = ", N, " \n", file = paramfile, append = TRUE)
   cat("chgptloc = ", chgptloc, "\n",
@@ -125,6 +126,7 @@ if (!estimate_mean) {
 #   3. Mei
 #   4. XS
 #   5. Chan
+#   6. MdFOCuS
 
 
 #### Step 1: Choosing thresholds for the methods via MC simulations ####
@@ -138,7 +140,8 @@ if (!identical(load_threshes_dir, "")) {
     ocd = list(),
     mei = list(),
     xs = list(),
-    chan = list()
+    chan = list(),
+    mdfocus = list()
   )
   ## .. so e.g. thresholds[[2]][[1]] is a vector of the MC simulated
   ## thresholds for the OCD method for the first value in the vector ps
@@ -169,6 +172,11 @@ if (!identical(load_threshes_dir, "")) {
       false_alarm_prob = false_alarm_prob, N = N,
       est_length = estimate_mean_until, MC_reps = MC_reps, seed = 123
     )
+
+    thresholds[[6]][[v]] <- MC_mdfocus_FA(p,
+                                       false_alarm_prob = false_alarm_prob, N = N,
+                                        MC_reps = MC_reps, seed = 123
+    )
   }
   if (save) {
     saveRDS(thresholds, file = sprintf("%s/thresholds.RDA", datadir))
@@ -182,29 +190,61 @@ if (!identical(load_threshes_dir, "")) {
 if (!identical(load_results_dir, "")) {
   results <- readRDS(file = sprintf("%s/results.RDA", load_results_dir))
 } else {
-  cl <- makeCluster(num_cores, type = "SOCK")
+  cl <- snow::makeCluster(num_cores, type = "SOCK")
   registerDoSNOW(cl)
+  snow::clusterEvalQ(cl, {
+    library(geometry)
+    library(purrr)
+    library(Rcpp)
+    library(CHAD)
+    library(ocd)
+  })
+  # Export plain R objects your workers need
+  snow::clusterExport(cl, c(
+    "ps","sparsities100","sparsities1000","thetas","thresholds","N","num_methods",
+    "chgptloc","constant_penalty","estimate_mean","estimate_mean_until"
+  ))
+  snow::clusterEvalQ(cl, {
+    source(system.file("tuning_competing_methods.R",
+                       package = "CHAD"))
+    source(system.file("MdFocus_MeanGaussian_md.R",
+                       package = "CHAD"))
+    TRUE
+  })
+  snow::clusterEvalQ(cl, {
+    p = ps[1]
+    ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
+    data = data.frame(t(ys))
+    sparsity_levels <- 2^seq_len(floor(log2(p)))
+    res = FocusCH_HighDim(data, get_opt_cost = \(...) get_partial_opt(..., cost=cost_lr_partial0, which_par = sparsity_levels), threshold = thresholds[[6]][[1]])
+    tt <- which(res$nb_at_step == 0)[1]
+  })
 
   # Set up progress bar
   pb <- txtProgressBar(max = num_sim, style = 3)
   progress <- function(n) setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
+  #registerDoSEQ()
+  rcpp_funcs <- c(
+    "FocusCH_HighDim",        # add all functions defined by your sourced scripts that touch Rcpp
+    "get_partial_opt",
+    "cost_lr_partial0"        # and any others used in the body
+  )
   results <- foreach(
     z = 1:num_sim,
-    .combine = function(...) abind(..., along = 5),
-    .multicombine = TRUE, .options.snow = opts
+    .combine = function(...) abind::abind(..., along = 5),
+    .multicombine = TRUE, .options.snow = opts,
+    .packages = c("CHAD","ocd","geometry","purrr","Rcpp","abind"),
+    .noexport = rcpp_funcs
   ) %dopar% {
-    # for(i in 1:num_sim){
 
-    library(CHAD)
     set.seed(z + 1000)
     result_array <- array(NA, dim = c(
       length(ps), length(sparsities100), length(thetas),
       num_methods
     ))
     {
-      sink("/dev/null") # avoiding prints to terminal
       for (v in 1:length(ps)) {
         p <- ps[v]
         for (j in 1:length(sparsities100)) {
@@ -283,10 +323,34 @@ if (!identical(load_results_dir, "")) {
                 result_array[v, j, t, i] <- (status(det)) + estimate_mean_until
               }
             }
+
+            ## mdfocus
+            if(!exists("FocusCH_HighDim")){
+              stop("Function FocusCH_HighDim not found")
+            }
+            if(!exists("get_partial_opt")){
+              stop("Function get_partial_opt not found")
+            }
+            if(!exists("cost_lr_partial0")){
+              stop("Function cost_lr_partial0 not found")
+            }
+
+            sparsity_levels <- 2^seq_len(floor(log2(p)))
+
+
+            dat = data.frame(t(ys))
+            res = FocusCH_HighDim(dat,
+                  get_opt_cost = \(...) get_partial_opt(...,
+                      cost=cost_lr_partial0, which_par = sparsity_levels),
+                  dim_indexes = as.list(1:ncol(dat)),
+                  common_ratio_step = 1.3,
+                  threshold = thresholds[[6]][[v]])
+            tt <- which(res$nb_at_step == 0)[1]
+            detect_time <- ifelse(is.na(tt), N, tt - 1)
+            result_array[v, j, t, 6] <- detect_time
           }
         }
       }
-      sink()
     }
 
     result_array
@@ -303,7 +367,7 @@ results <- provideDimnames(
   sep = "_",
   base = list("p", "sparsity", "theta", "method", "iteration")
 )
-dimnames(results)[[4]] <- c("CHAD", "ocd", "Mei", "XS", "Chan")
+dimnames(results)[[4]] <- c("CHAD", "ocd", "Mei", "XS", "Chan", "MdFOCuS")
 
 meanabove <- function(v) mean(v[v > 0])
 
@@ -326,15 +390,21 @@ lines(thetas, apply(results[p_ind, s_ind, , 4, ] - chgptloc, 1, meanabove),
 lines(thetas, apply(results[p_ind, s_ind, , 5, ] - chgptloc, 1, meanabove),
   type = "l", col = 5
 )
+lines(thetas, apply(results[p_ind, s_ind, , 6, ] - chgptloc, 1, meanabove),
+      type = "l", col = 6
+)
 
 
 # check false alarm rates:
 rowMeans(results[1, 1, 1, , ] < N)
-rowMeans(results[2, 1, 1, , ] < N)
+if(length(ps) > 1){
+  rowMeans(results[2, 1, 1, , ] < N)
+}
+
 
 
 ## Making nice plots with ggplot2
-for (p_ind in 1:2) {
+for (p_ind in 1:length(ps)) {
   lenn <- length(apply(results[p_ind, s_ind, , 1, ] - chgptloc, 1, meanabove))
   plots <- list()
   for (i in 1:length(sparsities100)) {
@@ -346,14 +416,16 @@ for (p_ind in 1:2) {
         apply(results[p_ind, s_ind, , 2, ] - chgptloc, 1, meanabove),
         apply(results[p_ind, s_ind, , 3, ] - chgptloc, 1, meanabove),
         apply(results[p_ind, s_ind, , 4, ] - chgptloc, 1, meanabove),
-        apply(results[p_ind, s_ind, , 5, ] - chgptloc, 1, meanabove)
+        apply(results[p_ind, s_ind, , 5, ] - chgptloc, 1, meanabove),
+        apply(results[p_ind, s_ind, , 6, ] - chgptloc, 1, meanabove)
       ),
       Method = factor(c(
         rep("CHAD", lenn),
         rep("ocd", lenn),
         rep("Mei", lenn),
         rep("Xie and Siegmund", lenn),
-        rep("Chan", lenn)
+        rep("Chan", lenn),
+        rep("MdFOCuS", lenn)
       ))
     )
     if (p_ind == 1) {
@@ -368,12 +440,12 @@ for (p_ind in 1:2) {
     ) +
       geom_line() + # Plot lines
       scale_color_manual(values = c(
-        "red", "blue",
-        "green", "purple", "orange"
+        "black", "blue",
+        "green", "purple", "orange", "red"
       )) + # Custom colors
       scale_linetype_manual(values = c(
         "solid", "dashed",
-        "longdash", "dotdash", "twodash"
+        "longdash", "dotdash", "twodash", "dotted"
       )) + # Custom line types
       theme_bw() + # Add theme_bw()
       theme(legend.position = "right") +
@@ -400,7 +472,7 @@ for (p_ind in 1:2) {
   }
   # Combine the plots using patchwork, and share the legend
   combined_plot <- (plots[[1]] + plots[[2]]) / (plots[[3]] + plots[[4]]) +
-    plot_layout(guides = "collect") &
+    plot_layout(guides = "collect") +
     theme(legend.position = "bottom")
 
   combined_plot
