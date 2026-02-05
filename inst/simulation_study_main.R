@@ -18,11 +18,11 @@ library(patchwork)
 library(ocd)
 
 ## Saving options
-save <- FALSE # results are saved if TRUE
+save <- TRUE # results are saved if TRUE
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
-maindir <- ""
+maindir <- "/mn/sarpanitu/ansatte-u2/pamoen/JRSSB_revision/code/results"
 dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
@@ -59,15 +59,15 @@ source(system.file("tuning_competing_methods.R",
 
 
 
-N <- 1000 # length of a single stream
+N <- 30 # length of a single stream
 chgptloc <- round(N / 3) #changepoint location
-num_sim <- 6 # number of iterations in the simulation
+num_sim <- 12 # number of iterations in the simulation
 ps <- c(100) # dimensions to be considered
 sparsities <- c(1, 5, 10, 100)
 thetas <- seq(0.0, 8.0, by = 0.4)
 num_methods <- 6
-num_cores <- 6
-MC_reps <- 2 # number of MC simulations to choose thresholds
+num_cores <- 12
+MC_reps <- 10 # number of MC simulations to choose thresholds
 false_alarm_prob <- 0.05
 estimate_mean <- FALSE
 estimate_mean_until <- round(chgptloc / 2)
@@ -455,7 +455,7 @@ for (p_ind in 1:length(ps)) {
   }
   # Combine the plots using patchwork, and share the legend
   combined_plot <- (plots[[1]] + plots[[2]]) / (plots[[3]] + plots[[4]]) +
-    plot_layout(guides = "collect") +
+    plot_layout(guides = "collect") &
     theme(legend.position = "bottom")
 
   combined_plot
@@ -469,16 +469,16 @@ for (p_ind in 1:length(ps)) {
         filename = sprintf("%s/plot_p=%d_s=%d.eps", plotdir, ps[p_ind], ss),
         plot = plots[[j]],
         device = "eps",
-        width = 8,
-        height = 8
+        width = 7,
+        height = 7
       )
 
       ggsave(
         filename = sprintf("%s/plot_p=%d_s=%d.pdf", plotdir, ps[p_ind], ss),
         plot = plots[[j]],
         device = "pdf",
-        width = 8,
-        height = 8
+        width = 7,
+        height = 7
       )
     }
 
@@ -487,16 +487,16 @@ for (p_ind in 1:length(ps)) {
       filename = sprintf("%s/plot_p=%d_combined.eps", plotdir, ps[p_ind]),
       plot = combined_plot,
       device = "eps",
-      width = 8,
-      height = 8
+      width = 7,
+      height = 7
     )
 
     ggsave(
       filename = sprintf("%s/plot_p=%d_combined.pdf", plotdir, ps[p_ind]),
       plot = combined_plot,
       device = "pdf",
-      width = 8,
-      height = 8
+      width = 7,
+      height = 7
     )
   }
 }
@@ -575,7 +575,7 @@ for (p_ind in 1:length(ps)) {
   }
   # Combine the plots using patchwork, and share the legend
   combined_plot <- (plots[[1]] + plots[[2]]) / (plots[[3]] + plots[[4]]) +
-    plot_layout(guides = "collect") +
+    plot_layout(guides = "collect") &
     theme(legend.position = "bottom")
 
   combined_plot
@@ -586,37 +586,37 @@ for (p_ind in 1:length(ps)) {
       ss <- sparsities[j]
 
       ggsave(
-        filename = sprintf("%s/plot_p=%d_s=%d.eps", plotdir, ps[p_ind], ss),
+        filename = sprintf("%s/plot_p=%d_s=%d_log.eps", plotdir, ps[p_ind], ss),
         plot = plots[[j]],
         device = "eps",
-        width = 8,
-        height = 8
+        width = 7,
+        height = 7
       )
 
       ggsave(
-        filename = sprintf("%s/plot_p=%d_s=%d.pdf", plotdir, ps[p_ind], ss),
+        filename = sprintf("%s/plot_p=%d_s=%d_log.pdf", plotdir, ps[p_ind], ss),
         plot = plots[[j]],
         device = "pdf",
-        width = 8,
-        height = 8
+        width = 7,
+        height = 7
       )
     }
 
     ## Plot combined plot
     ggsave(
-      filename = sprintf("%s/plot_p=%d_combined.eps", plotdir, ps[p_ind]),
+      filename = sprintf("%s/plot_p=%d_combined_log.eps", plotdir, ps[p_ind]),
       plot = combined_plot,
       device = "eps",
-      width = 8,
-      height = 8
+      width = 7,
+      height = 7
     )
 
     ggsave(
-      filename = sprintf("%s/plot_p=%d_combined.pdf", plotdir, ps[p_ind]),
+      filename = sprintf("%s/plot_p=%d_combined_log.pdf", plotdir, ps[p_ind]),
       plot = combined_plot,
       device = "pdf",
-      width = 8,
-      height = 8
+      width = 7,
+      height = 7
     )
   }
 }
