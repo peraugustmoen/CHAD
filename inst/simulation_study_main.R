@@ -59,15 +59,15 @@ source(system.file("tuning_competing_methods.R",
 
 
 
-N <- 30 # length of a single stream
+N <- 2000 # length of a single stream
 chgptloc <- round(N / 3) #changepoint location
-num_sim <- 12 # number of iterations in the simulation
+num_sim <- 1000 # number of iterations in the simulation
 ps <- c(100) # dimensions to be considered
 sparsities <- c(1, 5, 10, 100)
 thetas <- seq(0.0, 8.0, by = 0.4)
 num_methods <- 6
 num_cores <- 12
-MC_reps <- 10 # number of MC simulations to choose thresholds
+MC_reps <- 1000 # number of MC simulations to choose thresholds
 false_alarm_prob <- 0.05
 estimate_mean <- FALSE
 estimate_mean_until <- round(chgptloc / 2)
@@ -211,7 +211,12 @@ if (!identical(load_results_dir, "")) {
     ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
     data = data.frame(t(ys))
     sparsity_levels <- 2^seq_len(floor(log2(p)))
-    res = FocusCH_HighDim(data, get_opt_cost = \(...) get_partial_opt(..., cost=cost_lr_partial0, which_par = sparsity_levels), threshold = thresholds[[6]][[1]])
+    res = FocusCH_HighDim(data, get_opt_cost = \(...)
+          get_partial_opt(..., cost=cost_lr_partial0, which_par =
+                            sparsity_levels),
+          dim_indexes = as.list(1:ncol(data)),
+          common_ratio_step = 1.3,
+          threshold = thresholds[[6]][[1]])
     tt <- which(res$nb_at_step == 0)[1]
   })
 
