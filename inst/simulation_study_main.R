@@ -59,17 +59,15 @@ source(system.file("tuning_competing_methods.R",
 
 
 
-N <- 50 # length of a single stream
+N <- 1000 # length of a single stream
 chgptloc <- round(N / 3) #changepoint location
-num_sim <- 100 # number of iterations in the simulation
+num_sim <- 6 # number of iterations in the simulation
 ps <- c(100) # dimensions to be considered
-#ps <- c(100, 1000)
-sparsities100 <- c(1, 5, 10, 100)
-sparsities1000 <- c(1, 5, 30, 1000)
+sparsities <- c(1, 5, 10, 100)
 thetas <- seq(0.0, 8.0, by = 0.4)
 num_methods <- 6
 num_cores <- 6
-MC_reps <- 1000 # number of MC simulations to choose thresholds
+MC_reps <- 2 # number of MC simulations to choose thresholds
 false_alarm_prob <- 0.05
 estimate_mean <- FALSE
 estimate_mean_until <- round(chgptloc / 2)
@@ -92,13 +90,11 @@ if(save)
     append = TRUE
   )
   cat("ps = ", ps, "\n", file = paramfile, append = TRUE)
-  cat("sparsities100 = ", sparsities100, "\n",
+  cat("sparsities = ", sparsities, "\n",
     file = paramfile,
     append = TRUE
   )
-  cat("sparsities1000 = ", sparsities1000, "\n",
-    file = paramfile, append = TRUE
-  )
+
   cat("thetas = ", thetas, "\n", file = paramfile, append = TRUE)
   cat("num_methods = ", num_methods, "\n",
     file = paramfile,
@@ -199,9 +195,8 @@ if (!identical(load_results_dir, "")) {
     library(CHAD)
     library(ocd)
   })
-  # Export plain R objects your workers need
   snow::clusterExport(cl, c(
-    "ps","sparsities100","sparsities1000","thetas","thresholds","N","num_methods",
+    "ps","sparsities","thetas","thresholds","N","num_methods",
     "chgptloc","constant_penalty","estimate_mean","estimate_mean_until"
   ))
   snow::clusterEvalQ(cl, {
@@ -225,11 +220,11 @@ if (!identical(load_results_dir, "")) {
   progress <- function(n) setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
-  #registerDoSEQ()
+  # functions that should NOT be exported from global env
   rcpp_funcs <- c(
-    "FocusCH_HighDim",        # add all functions defined by your sourced scripts that touch Rcpp
+    "FocusCH_HighDim",
     "get_partial_opt",
-    "cost_lr_partial0"        # and any others used in the body
+    "cost_lr_partial0"
   )
   results <- foreach(
     z = 1:num_sim,
@@ -241,24 +236,15 @@ if (!identical(load_results_dir, "")) {
 
     set.seed(z + 1000)
     result_array <- array(NA, dim = c(
-      length(ps), length(sparsities100), length(thetas),
+      length(ps), length(sparsities), length(thetas),
       num_methods
     ))
     {
       for (v in 1:length(ps)) {
         p <- ps[v]
-        for (j in 1:length(sparsities100)) {
-          s <- 1 # sparsity
-          if (p < 100) {
-            s <- j
-            if (j == length(sparsities100)) {
-              s <- p
-            }
-          } else if (v == 1) {
-            s <- sparsities100[j]
-          } else {
-            s <- sparsities1000[j]
-          }
+        for (j in 1:length(sparsities)) {
+          s <- sparsities[j]
+
           for (t in 1:length(thetas)) {
             theta <- thetas[t]
             ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
@@ -407,7 +393,7 @@ if(length(ps) > 1){
 for (p_ind in 1:length(ps)) {
   lenn <- length(apply(results[p_ind, s_ind, , 1, ] - chgptloc, 1, meanabove))
   plots <- list()
-  for (i in 1:length(sparsities100)) {
+  for (i in 1:length(sparsities)) {
     s_ind <- i
     plotdata <- data.frame(
       x = thetas,
@@ -428,11 +414,8 @@ for (p_ind in 1:length(ps)) {
         rep("MdFOCuS", lenn)
       ))
     )
-    if (p_ind == 1) {
-      ss <- sparsities100[i]
-    } else {
-      ss <- sparsities1000[i]
-    }
+
+    ss <- sparsities[i]
 
     plot_base <- ggplot(
       data = plotdata,
@@ -478,13 +461,10 @@ for (p_ind in 1:length(ps)) {
   combined_plot
 
   if (save) {
-    for (j in 1:length(sparsities100)) {
-      ss <- 0
-      if (p_ind == 1) {
-        ss <- sparsities100[j]
-      } else {
-        ss <- sparsities1000[j]
-      }
+    for (j in 1:length(sparsities)) {
+
+      ss <- sparsities[j]
+
       ggsave(
         filename = sprintf("%s/plot_p=%d_s=%d.eps", plotdir, ps[p_ind], ss),
         plot = plots[[j]],
@@ -520,3 +500,124 @@ for (p_ind in 1:length(ps)) {
     )
   }
 }
+
+
+##### make same plots but on log scale ######
+
+
+
+## Making nice plots with ggplot2
+for (p_ind in 1:length(ps)) {
+  lenn <- length(apply(results[p_ind, s_ind, , 1, ] - chgptloc, 1, meanabove))
+  plots <- list()
+  for (i in 1:length(sparsities)) {
+    s_ind <- i
+    yy = c(
+      apply(results[p_ind, s_ind, , 1, ] - chgptloc, 1, meanabove),
+      apply(results[p_ind, s_ind, , 2, ] - chgptloc, 1, meanabove),
+      apply(results[p_ind, s_ind, , 3, ] - chgptloc, 1, meanabove),
+      apply(results[p_ind, s_ind, , 4, ] - chgptloc, 1, meanabove),
+      apply(results[p_ind, s_ind, , 5, ] - chgptloc, 1, meanabove),
+      apply(results[p_ind, s_ind, , 6, ] - chgptloc, 1, meanabove)
+    )
+    yy[is.na(yy)] <- 1
+    yy = log(yy)
+    plotdata <- data.frame(
+      x = thetas,
+      y = yy,
+      Method = factor(c(
+        rep("CHAD", lenn),
+        rep("ocd", lenn),
+        rep("Mei", lenn),
+        rep("Xie and Siegmund", lenn),
+        rep("Chan", lenn),
+        rep("MdFOCuS", lenn)
+      ))
+    )
+
+    ss <- sparsities[i]
+
+    plot_base <- ggplot(
+      data = plotdata,
+      aes(x = x, y = y, color = Method, linetype = Method)
+    ) +
+      geom_line() + # Plot lines
+      scale_color_manual(values = c(
+        "black", "blue",
+        "green", "purple", "orange", "red"
+      )) + # Custom colors
+      scale_linetype_manual(values = c(
+        "solid", "dashed",
+        "longdash", "dotdash", "twodash", "dotted"
+      )) + # Custom line types
+      theme_bw() + # Add theme_bw()
+      theme(legend.position = "right") +
+      scale_y_continuous(limits = c(0, max(yy))) +
+      ggtitle(sprintf("k = %d", ss)) +
+      theme(plot.title = element_text(hjust = 0.5)) +
+      ylab("Log detection delay") +
+      xlab(bquote(phi)) +
+      theme(legend.title = element_blank())
+
+
+    if (i %in% c(2, 4)) {
+      plot_base <- plot_base + theme(
+        axis.title.y = element_blank(), axis.text.y = element_blank()
+      )
+    }
+    if (i %in% c(1, 2)) {
+      plot_base <- plot_base + theme(
+        axis.title.x = element_blank(), axis.text.x = element_blank()
+      )
+    }
+
+    plots[[i]] <- plot_base
+  }
+  # Combine the plots using patchwork, and share the legend
+  combined_plot <- (plots[[1]] + plots[[2]]) / (plots[[3]] + plots[[4]]) +
+    plot_layout(guides = "collect") +
+    theme(legend.position = "bottom")
+
+  combined_plot
+
+  if (save) {
+    for (j in 1:length(sparsities)) {
+
+      ss <- sparsities[j]
+
+      ggsave(
+        filename = sprintf("%s/plot_p=%d_s=%d.eps", plotdir, ps[p_ind], ss),
+        plot = plots[[j]],
+        device = "eps",
+        width = 8,
+        height = 8
+      )
+
+      ggsave(
+        filename = sprintf("%s/plot_p=%d_s=%d.pdf", plotdir, ps[p_ind], ss),
+        plot = plots[[j]],
+        device = "pdf",
+        width = 8,
+        height = 8
+      )
+    }
+
+    ## Plot combined plot
+    ggsave(
+      filename = sprintf("%s/plot_p=%d_combined.eps", plotdir, ps[p_ind]),
+      plot = combined_plot,
+      device = "eps",
+      width = 8,
+      height = 8
+    )
+
+    ggsave(
+      filename = sprintf("%s/plot_p=%d_combined.pdf", plotdir, ps[p_ind]),
+      plot = combined_plot,
+      device = "pdf",
+      width = 8,
+      height = 8
+    )
+  }
+}
+

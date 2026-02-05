@@ -68,8 +68,8 @@ source(system.file("tuning_competing_methods.R",
 #   6. mdfocus
 
 ## Global params
-num_sim_n <- 2 # number of iterations for the simulation varying n
-num_sim_p <- 2 # number of iterations for the simulation varying n
+num_sim_n <- 10 # number of iterations for the simulation varying n
+num_sim_p <- 10 # number of iterations for the simulation varying n
 num_methods <- 6
 estimate_mean <- FALSE
 estimate_mean_until <- 0
@@ -162,7 +162,7 @@ if (!estimate_mean) {
   runtimes_n <- runtimes_n * 1000
 
   # convert to kB:
-  memory_n <- memory_n / 10000
+  memory_n <- memory_n / 1000
 
   num_obs_vector <- 1:(dim(runtimes_n)[2]) * binlength_N
 
@@ -297,6 +297,11 @@ plotdata1 <- data.frame(
     rep("MdFOCuS", N / binlength_N)
   ))
 )
+maxy = max(y)
+miny = min(y)
+diff = maxy - miny
+lowerylim = miny-diff*0.03
+upperylim = maxy+diff*0.03
 
 
 plot1 <- ggplot(
@@ -314,7 +319,7 @@ plot1 <- ggplot(
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, 7.5)) +
+  scale_y_continuous(limits = c(lowerylim, upperylim)) +
   # ggtitle(bquote(p == .(p_const))) +
   # theme(plot.title = element_text(hjust = 0.5))+
   ylab("Update time (ms)") +
@@ -336,7 +341,11 @@ plotdata2 <- data.frame(
     rep("MdFOCuS", N / binlength_N)
   ))
 )
-
+maxy = max(y)
+miny = min(y)
+diff = maxy - miny
+lowerylim = miny-diff*0.03
+upperylim = maxy+diff*0.03
 
 plot2 <- ggplot(
   data = plotdata2,
@@ -353,7 +362,7 @@ plot2 <- ggplot(
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, 41)) +
+  scale_y_continuous(limits = c(lowerylim, upperylim)) +
   # theme(plot.title = element_text(hjust = 0.5))+
   # ggtitle(bquote(t == .(n_const))) +
   ylab("Memory use (Kb)") +
@@ -376,6 +385,11 @@ plotdata3 <- data.frame(
     rep("MdFOCuS", P / binlength_P)
   ))
 )
+maxy = max(y)
+miny = min(y)
+diff = maxy - miny
+lowerylim = miny-diff*0.03
+upperylim = maxy+diff*0.03
 
 
 plot3 <- ggplot(
@@ -394,7 +408,7 @@ plot3 <- ggplot(
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
   # ggtitle(bquote(t == .(n_const))) +
-  scale_y_continuous(limits = c(0, 7.5)) +
+  scale_y_continuous(limits = c(lowerylim,upperylim)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ylab("Update time (ms)") +
   xlab(bquote(p)) +
@@ -415,6 +429,11 @@ plotdata4 <- data.frame(
     rep("MdFOCuS", P / binlength_P)
   ))
 )
+maxy = max(y)
+miny = min(y)
+diff = maxy - miny
+lowerylim = miny-diff*0.03
+upperylim = maxy+diff*0.03
 
 
 plot4 <- ggplot(
@@ -432,7 +451,7 @@ plot4 <- ggplot(
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, 600)) +
+  scale_y_continuous(limits = c(lowerylim,upperylim)) +
   ylab("Memory use (Kb)") +
   # scale_y_continuous(limits = c(0,200)) +
   xlab(bquote(p)) +
@@ -529,7 +548,6 @@ if (save) {
 
 ######## NORMALIZED PLOTS #############
 
-## Plotting
 
 # first, run time dependence on sample size:
 plotdata1_normalized <- data.frame(
@@ -544,7 +562,11 @@ plotdata1_normalized <- data.frame(
     rep("MdFOCuS", N / binlength_N)
   ))
 )
-
+maxy = max(y)
+miny = min(y)
+diff = maxy - miny
+lowerylim = miny-diff*0.03
+upperylim = maxy+diff*0.03
 
 plot1 <- ggplot(
   data = plotdata1_normalized,
@@ -561,7 +583,7 @@ plot1 <- ggplot(
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, 3.5)) +
+  scale_y_continuous(limits = c(lowerylim,upperylim)) +
   # ggtitle(bquote(p == .(p_const))) +
   # theme(plot.title = element_text(hjust = 0.5))+
   ylab("Relative update time") +
@@ -583,6 +605,11 @@ plotdata2_normalized <- data.frame(
     rep("MdFOCuS", N / binlength_N)
   ))
 )
+maxy = max(y)
+miny = min(y)
+diff = maxy - miny
+lowerylim = miny-diff*0.03
+upperylim = maxy+diff*0.03
 
 
 plot2 <- ggplot(
@@ -600,7 +627,7 @@ plot2 <- ggplot(
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, 3)) +
+  scale_y_continuous(limits = c(lowerylim,upperylim)) +
   # theme(plot.title = element_text(hjust = 0.5))+
   # ggtitle(bquote(t == .(n_const))) +
   ylab("Relative memory use") +
@@ -623,6 +650,11 @@ plotdata3_normalized <- data.frame(
     rep("MdFOCuS", P / binlength_P)
   ))
 )
+maxy = max(y)
+miny = min(y)
+diff = maxy - miny
+lowerylim = miny-diff*0.03
+upperylim = maxy+diff*0.03
 
 
 plot3 <- ggplot(
@@ -641,7 +673,7 @@ plot3 <- ggplot(
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
   # ggtitle(bquote(t == .(n_const))) +
-  scale_y_continuous(limits = c(0, 25)) +
+  scale_y_continuous(limits = c(lowerylim,upperylim)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ylab("Relative update time") +
   xlab(bquote(p)) +
@@ -662,7 +694,11 @@ plotdata4_normalized <- data.frame(
     rep("MdFOCuS", P / binlength_P)
   ))
 )
-
+maxy = max(y)
+miny = min(y)
+diff = maxy - miny
+lowerylim = miny-diff*0.03
+upperylim = maxy+diff*0.03
 
 plot4 <- ggplot(
   data = plotdata4_normalized,
@@ -679,7 +715,7 @@ plot4 <- ggplot(
   )) + # Custom line types
   theme_bw() + # Add theme_bw()
   theme(legend.position = "right") +
-  scale_y_continuous(limits = c(0, 50)) +
+  scale_y_continuous(limits = c(lowerylim,upperylim)) +
   ylab("Memory use (Kb)") +
   # scale_y_continuous(limits = c(0,200)) +
   xlab(bquote(p)) +
