@@ -1,15 +1,15 @@
 # Modification of code from the R package 'ocd: High-Dimensional Multiscale
-# Online Changepoint Detection' (https://CRAN.R-project.org/package=ocd) and 
+# Online Changepoint Detection' (https://CRAN.R-project.org/package=ocd) and
 # Github Repository "Focused" (https://github.com/guillemr/Focused).
-# Original code by: Yudong Chen, Tengyao Wang, Richard J. Samworth (ocd) and 
-# Gaetano Romano, Liudmila Pishchagina and Guillem Rigaill (Focused). 
+# Original code by: Yudong Chen, Tengyao Wang, Richard J. Samworth (ocd) and
+# Gaetano Romano, Liudmila Pishchagina and Guillem Rigaill (Focused).
 
 # Description of modifications: The functions for choosing threshold values
 # via Monte Carlo simulation are adjusted to attain a given false alarm
-# probability. 
+# probability.
 
 
-# Date: 4th of Februare 2026. 
+# Date: 4th of Februare 2026.
 
 MC_ocd_FA <- function(
     dim, false_alarm_prob, N, beta = 1,
@@ -197,8 +197,8 @@ MC_mdfocus_FA <- function(dim, false_alarm_prob, N, MC_reps, seed = 123){
     data = data.frame(matrix(rnorm(N*p), nrow=N, ncol=p))
     res = FocusCH_HighDim(data, get_opt_cost = \(...) get_partial_opt(...,
           cost=cost_lr_partial0, which_par = sparsity_levels),
-          dim_indexes = as.list(1:ncol(data)),
-          common_ratio_step = 1.3,
+          #dim_indexes = as.list(1:ncol(data)),
+          #common_ratio_step = 1.3,
           threshold = rep(Inf, 2+length(sparsity_levels)))
     res = - (res$opt.cost |> reduce(rbind)) |> apply(2, max)
     ll[[k]] = res
@@ -226,8 +226,8 @@ MC_mdfocus_nonzeromean_FA <- function(dim, false_alarm_prob, N, MC_reps, seed = 
     data = data.frame(matrix(rnorm(N*p), nrow=N, ncol=p))
     res = FocusCH_HighDim(data, get_opt_cost = \(...) get_partial_opt(...,
           which_par = sparsity_levels),
-          dim_indexes = as.list(1:ncol(data)),
-          common_ratio_step = 1.3,
+          #dim_indexes = as.list(1:ncol(data)),
+          #common_ratio_step = 1.3,
           threshold = rep(Inf, 2+length(sparsity_levels)))
     res = - (res$opt.cost |> reduce(rbind)) |> apply(2, max)
     ll[[k]] = res

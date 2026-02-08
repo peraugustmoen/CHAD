@@ -333,8 +333,8 @@ if (!identical(load_results_dir, "")) {
             res = FocusCH_HighDim(dat,
                   get_opt_cost = \(...) get_partial_opt(...,
                       cost=cost_lr_partial0, which_par = sparsity_levels),
-                  dim_indexes = as.list(1:ncol(dat)),
-                  common_ratio_step = 1.3,
+                  #dim_indexes = as.list(1:ncol(dat)),
+                  #common_ratio_step = 1.3,
                   threshold = thresholds[[6]][[v]])
             tt <- which(res$nb_at_step == 0)[1]
             detect_time <- ifelse(is.na(tt), N, tt - 1)
