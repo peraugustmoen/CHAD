@@ -58,9 +58,9 @@ source(system.file("tuning_competing_methods.R",
 
 
 
-N <- 30 # length of a single stream
+N <- 2000 # length of a single stream
 chgptloc <- round(N / 3)
-num_sim <- 100 # number of iterations in the simulation
+num_sim <- 1000 # number of iterations in the simulation
 ps <- c(100) # dimensions to be considered
 #ps <- c(100, 1000)
 sparsities <- c(1, 5, 10, 100)
@@ -70,7 +70,7 @@ num_cores <- 12
 MC_reps <- 1000
 false_alarm_prob <- 0.05
 estimate_mean <- TRUE
-estimate_mean_until <- round(chgptloc)
+estimate_mean_until <- round(chgptloc/2)
 constant_penalty <- TRUE
 
 if (!estimate_mean) {
@@ -169,8 +169,8 @@ if (!identical(load_threshes_dir, "")) {
     )
 
     thresholds[[6]][[v]] <- MC_mdfocus_nonzeromean_FA(p,
-                                          false_alarm_prob = false_alarm_prob, N = N,
-                                          MC_reps = MC_reps, seed = 123
+                                                      false_alarm_prob = false_alarm_prob, N = N,
+                                                      MC_reps = MC_reps, seed = 123
     )
   }
   if (save) {
@@ -323,10 +323,10 @@ if (!identical(load_results_dir, "")) {
 
             dat = data.frame(t(ys))
             res = FocusCH_HighDim(dat, get_opt_cost = \(...)
-                  get_partial_opt(..., which_par = sparsity_levels),
-                  dim_indexes = as.list(1:ncol(dat)),
-                  common_ratio_step = 1.3,
-                  threshold = thresholds[[6]][[v]])
+                                  get_partial_opt(..., which_par = sparsity_levels),
+                                  #dim_indexes = as.list(1:ncol(dat)),
+                                  #common_ratio_step = 1.3,
+                                  threshold = thresholds[[6]][[v]])
             tt <- which(res$nb_at_step == 0)[1]
             detect_time <- ifelse(is.na(tt), N, tt - 1)
             result_array[v, j, t, 6] <- detect_time
