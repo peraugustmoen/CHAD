@@ -22,7 +22,7 @@ save <- TRUE # results are saved if TRUE
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
-maindir <- "/mn/sarpanitu/ansatte-u2/pamoen/JRSSB_revision/code/results"
+maindir <- ""
 dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
@@ -214,8 +214,6 @@ if (!identical(load_results_dir, "")) {
     res = FocusCH_HighDim(data, get_opt_cost = \(...)
                           get_partial_opt(..., cost=cost_lr_partial0, which_par =
                                             sparsity_levels),
-                          dim_indexes = as.list(1:ncol(data)),
-                          common_ratio_step = 1.3,
                           threshold = thresholds[[6]][[1]])
     tt <- which(res$nb_at_step == 0)[1]
   })
@@ -332,9 +330,7 @@ if (!identical(load_results_dir, "")) {
             dat = data.frame(t(ys))
             res = FocusCH_HighDim(dat,
                                   get_opt_cost = \(...) get_partial_opt(...,
-                                                                        cost=cost_lr_partial0, which_par = sparsity_levels),
-                                  #dim_indexes = as.list(1:ncol(dat)),
-                                  #common_ratio_step = 1.3,
+                                  cost=cost_lr_partial0, which_par = sparsity_levels),
                                   threshold = thresholds[[6]][[v]])
             tt <- which(res$nb_at_step == 0)[1]
             detect_time <- ifelse(is.na(tt), N, tt - 1)

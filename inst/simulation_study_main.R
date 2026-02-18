@@ -5,10 +5,12 @@
 ## This simulation is for the setting with known pre-change mean (=0).
 ## For unknown pre-change mean, see simulation_study_nonzero.R
 
-## Install the CHAD package from GitHub:
-# devtools::install_github("peraugustmoen/CHAD")
+## To run the simulation, install the CHAD package from GitHub:
+# devtools::install_github("peraugustmoen/CHAD").
+# You might also have to install the ocd package from CRAN:
+# install.packages("ocd")
 
-## Imports
+## Imports:
 library(CHAD)
 library(foreach)
 library(doSNOW)
@@ -17,12 +19,12 @@ library(ggplot2)
 library(patchwork)
 library(ocd)
 
-## Saving options
+## Saving options:
 save <- TRUE # results are saved if TRUE
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
-maindir <- "/mn/sarpanitu/ansatte-u2/pamoen/JRSSB_revision/code/results"
+maindir <- ""
 dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
@@ -66,7 +68,7 @@ ps <- c(100) # dimensions to be considered
 sparsities <- c(1, 5, 10, 100)
 thetas <- seq(0.0, 8.0, by = 0.4)
 num_methods <- 6
-num_cores <- 12
+num_cores <- 12 # number of cores to use for parallel execution
 MC_reps <- 1000 # number of MC simulations to choose thresholds
 false_alarm_prob <- 0.05
 estimate_mean <- FALSE
@@ -139,7 +141,7 @@ if (!identical(load_threshes_dir, "")) {
     chan = list(),
     mdfocus = list()
   )
-  ## .. so e.g. thresholds[[2]][[1]] is a vector of the MC simulated
+  ## Here, for example, thresholds[[2]][[1]] is a vector of the MC simulated
   ## thresholds for the OCD method for the first value in the vector ps
 
   for (v in 1:length(ps)) {
@@ -214,8 +216,6 @@ if (!identical(load_results_dir, "")) {
     res = FocusCH_HighDim(data, get_opt_cost = \(...)
           get_partial_opt(..., cost=cost_lr_partial0, which_par =
                             sparsity_levels),
-          dim_indexes = as.list(1:ncol(data)),
-          common_ratio_step = 1.3,
           threshold = thresholds[[6]][[1]])
     tt <- which(res$nb_at_step == 0)[1]
   })
@@ -333,9 +333,7 @@ if (!identical(load_results_dir, "")) {
             res = FocusCH_HighDim(dat,
                   get_opt_cost = \(...) get_partial_opt(...,
                       cost=cost_lr_partial0, which_par = sparsity_levels),
-                  #dim_indexes = as.list(1:ncol(dat)),
-                  #common_ratio_step = 1.3,
-                  threshold = thresholds[[6]][[v]])
+                      threshold = thresholds[[6]][[v]])
             tt <- which(res$nb_at_step == 0)[1]
             detect_time <- ifelse(is.na(tt), N, tt - 1)
             result_array[v, j, t, 6] <- detect_time
@@ -388,9 +386,7 @@ lines(thetas, apply(results[p_ind, s_ind, , 6, ] - chgptloc, 1, meanabove),
 
 # check false alarm rates:
 rowMeans(results[1, 1, 1, , ] < N)
-if(length(ps) > 1){
-  rowMeans(results[2, 1, 1, , ] < N)
-}
+
 
 
 
@@ -434,8 +430,8 @@ for (p_ind in 1:length(ps)) {
       scale_linetype_manual(values = c(
         "solid", "dashed",
         "longdash", "dotdash", "twodash", "dotted"
-      )) + # Custom line types
-      theme_bw() + # Add theme_bw()
+      )) +
+      theme_bw() +
       theme(legend.position = "right") +
       scale_y_continuous(limits = c(0, N - chgptloc)) +
       ggtitle(sprintf("k = %d", ss)) +
@@ -508,10 +504,6 @@ for (p_ind in 1:length(ps)) {
 
 
 ##### make same plots but on log scale ######
-
-
-
-## Making nice plots with ggplot2
 for (p_ind in 1:length(ps)) {
   lenn <- length(apply(results[p_ind, s_ind, , 1, ] - chgptloc, 1, meanabove))
   plots <- list()
@@ -554,8 +546,8 @@ for (p_ind in 1:length(ps)) {
       scale_linetype_manual(values = c(
         "solid", "dashed",
         "longdash", "dotdash", "twodash", "dotted"
-      )) + # Custom line types
-      theme_bw() + # Add theme_bw()
+      )) +
+      theme_bw() +
       theme(legend.position = "right") +
       scale_y_continuous(limits = c(0, max(yy))) +
       ggtitle(sprintf("k = %d", ss)) +

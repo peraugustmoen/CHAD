@@ -2,8 +2,10 @@
 ## ...for the paper 'A grid-based framework for fast online changepoint detection',
 ## Per August Jarval Moen, 2026.
 
-## Install the CHAD package from GitHub:
-# devtools::install_github("peraugustmoen/CHAD")
+## To run the simulation, install the CHAD package from GitHub:
+# devtools::install_github("peraugustmoen/CHAD").
+# You might also have to install the ocd package from CRAN:
+# install.packages("ocd")
 
 ## Imports
 library(CHAD)
@@ -19,7 +21,7 @@ save <- TRUE # if results should be saved
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
-maindir <- "/Users/peraugustmoen/Library/CloudStorage/OneDrive-UniversitetetiOslo/project3/THECODE/simulations"
+maindir <- ""
 dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
@@ -46,12 +48,6 @@ if (save) {
 }
 
 
-## NOTE:
-#  The package 'ocd' must be installed. Uncomment below line if needed:
-# install.packages('ocd')
-
-
-
 source(system.file("tuning_competing_methods.R",
                    package = "CHAD"))
 
@@ -69,7 +65,7 @@ source(system.file("tuning_competing_methods.R",
 
 ## Global params
 num_sim_n <- 10 # number of iterations for the simulation varying n
-num_sim_p <- 10 # number of iterations for the simulation varying n
+num_sim_p <- 10 # number of iterations for the simulation varying p
 num_methods <- 6
 estimate_mean <- FALSE
 estimate_mean_until <- 0
@@ -118,7 +114,6 @@ if (!estimate_mean) {
     detectors[[5]] <- detector_chan
 
     for (m in 1:5) {
-      # cat("m = ", m, "\n")
       for (j in 1:dim(runtimes_n)[2]) {
         ## start timing
         startt <- proc.time()
@@ -143,9 +138,7 @@ if (!estimate_mean) {
       dat = data.frame(t(ys[, 1:(j * binlength_N)]))
       startt <- proc.time()
       res = FocusCH_HighDim(dat, get_opt_cost = \(...) get_partial_opt(...,
-                                                                       cost=cost_lr_partial0, which_par = sparsity_levels),
-                            #dim_indexes = as.list(1:ncol(dat)),
-                            #common_ratio_step = 1.3,
+                            cost=cost_lr_partial0, which_par = sparsity_levels),
                             threshold = rep(Inf, 2+length(sparsity_levels)))
       endd <- proc.time()
       runtimes_n[6, j] <- runtimes_n[6, j] +
@@ -254,9 +247,7 @@ plot(runtimes_n[6,])
       dat = data.frame(t(ys))
       startt <- proc.time()
       res = FocusCH_HighDim(dat, get_opt_cost = \(...) get_partial_opt(...,
-                                                                       cost=cost_lr_partial0, which_par = sparsity_levels),
-                            dim_indexes = as.list(1:ncol(dat)),
-                            common_ratio_step = 1.3,
+                            cost=cost_lr_partial0, which_par = sparsity_levels),
                             threshold = rep(Inf, 2+length(sparsity_levels)))
       endd <- proc.time()
       runtimes_p[6, j] <- runtimes_p[6, j] +
@@ -322,12 +313,10 @@ plot1 <- ggplot(
   scale_linetype_manual(values = c(
     "solid", "dashed",
     "longdash", "dotdash", "twodash", "dotted"
-  )) + # Custom line types
-  theme_bw() + # Add theme_bw()
+  )) +
+  theme_bw() +
   theme(legend.position = "right") +
   scale_y_continuous(limits = c(lowerylim, upperylim)) +
-  # ggtitle(bquote(p == .(p_const))) +
-  # theme(plot.title = element_text(hjust = 0.5))+
   ylab("Update time (ms)") +
   theme(legend.title = element_blank()) +
   xlab(bquote(t)) +
@@ -365,12 +354,10 @@ plot2 <- ggplot(
   scale_linetype_manual(values = c(
     "solid", "dashed",
     "longdash", "dotdash", "twodash", "dotted"
-  )) + # Custom line types
-  theme_bw() + # Add theme_bw()
+  )) +
+  theme_bw() +
   theme(legend.position = "right") +
   scale_y_continuous(limits = c(lowerylim, upperylim)) +
-  # theme(plot.title = element_text(hjust = 0.5))+
-  # ggtitle(bquote(t == .(n_const))) +
   ylab("Memory use (Kb)") +
   xlab(bquote(t)) +
   theme(legend.title = element_blank())
@@ -410,10 +397,9 @@ plot3 <- ggplot(
   scale_linetype_manual(values = c(
     "solid", "dashed",
     "longdash", "dotdash", "twodash", "dotted"
-  )) + # Custom line types
-  theme_bw() + # Add theme_bw()
+  )) +
+  theme_bw() +
   theme(legend.position = "right") +
-  # ggtitle(bquote(t == .(n_const))) +
   scale_y_continuous(limits = c(lowerylim,upperylim)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   ylab("Update time (ms)") +
@@ -450,16 +436,15 @@ plot4 <- ggplot(
   scale_color_manual(values = c(
     "black", "blue",
     "green", "purple", "orange", "red"
-  )) + # Custom colors
+  )) +
   scale_linetype_manual(values = c(
     "solid", "dashed",
     "longdash", "dotdash", "twodash", "dotted"
-  )) + # Custom line types
-  theme_bw() + # Add theme_bw()
+  )) +
+  theme_bw() +
   theme(legend.position = "right") +
   scale_y_continuous(limits = c(lowerylim,upperylim)) +
   ylab("Memory use (Kb)") +
-  # scale_y_continuous(limits = c(0,200)) +
   xlab(bquote(p)) +
   theme(legend.title = element_blank()) +
   theme(axis.title.y = element_blank())

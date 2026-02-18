@@ -7,11 +7,11 @@
 
 
 ## Saving options
-save <- FALSE # if results should be saved
+save <- TRUE # if results should be saved
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
-maindir <- ""
+maindir <- "/Users/peraugustmoen/Library/CloudStorage/OneDrive-UniversitetetiOslo/project3/jrss-b_revision/final_plots_and_code_for_paper/dataexample"
 dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
@@ -150,7 +150,7 @@ dates[changepoints] +1 # plus one since we took a diff
 cat("Candidate changepoint location where the change was flagged:\n")
 dates[changepoints - argmax] +1 # plus one since we took a diff
 
-# Plotly plot with vertical lines at changepoints
+# Interactive plot of exchange rates with changepoint declarations:
 plot <- plot_ly(df_long,
   x = ~date, y = ~value, color = ~series,
   type = "scatter", mode = "lines"
@@ -160,9 +160,43 @@ plot <- plot_ly(df_long,
     yaxis = list(title = "Value")
   )
 
+
+
 shapes <- list()
 for (i in 1:length(changepoints)) {
   cp <- dates[changepoints[i]]+1 #plus one since we took a diff
+  shapes <- append(shapes, list(
+    list(
+      type = "line",
+      x0 = cp, x1 = cp,
+      y0 = 0, y1 = 1, # Using relative coordinates for y-axis
+      xref = "x", # Reference x and y axes
+      yref = "paper", # yref = 'paper' uses the whole plot height
+      line = list(color = "red", dash = "dash")
+    )
+  ))
+}
+plot <- plot %>% layout(shapes = shapes)
+plot
+
+# Interactive plot with differentiated rates + changepoints
+df_diff_long <- dat_diff %>%
+  pivot_longer(cols = -date, names_to = "series", values_to = "value")
+# Plotly plot with vertical lines at changepoints
+plot <- plot_ly(df_diff_long,
+                x = ~date, y = ~value, color = ~series,
+                type = "scatter", mode = "lines"
+) %>%
+  layout(
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Value")
+  )
+
+
+
+shapes <- list()
+for (i in 1:length(changepoints)) {
+  cp <- dates[changepoints[i]]
   # print(cp)
   shapes <- append(shapes, list(
     list(
@@ -177,6 +211,9 @@ for (i in 1:length(changepoints)) {
 }
 plot <- plot %>% layout(shapes = shapes)
 plot
+
+
+
 
 
 # ggplot for nice pdf and eps output
@@ -215,14 +252,14 @@ if (save) {
     plot = plot,
     device = "eps",
     width = 8,
-    height = 8
+    height = 6
   )
   ggsave(
     filename = sprintf("%s/currencies.pdf", savedir),
     plot = plot,
     device = "pdf",
     width = 8,
-    height = 8
+    height = 6
   )
 }
 
@@ -236,7 +273,8 @@ if (save) {
 ## Gaussian distribution with long training period
 
 # Choose critical value via MC simulation with isotropic Gaussian noise,
-# with 5% false alarm probability tolerance
+# with 5% false alarm probability tolerance, with sequences of length
+# N = 10,000
 
 critical_value_long <- MC_covariance(
   p = p, false_alarm_prob = 0.05,
@@ -245,7 +283,7 @@ critical_value_long <- MC_covariance(
   baseline_operatornorm = 1,
   seed = 102102
 )
-
+# critical_value_long = 6.146377
 
 detector <- CHAD(p,
                  method = "covariance", leading_constant = critical_value_long,
@@ -339,18 +377,18 @@ print(plot)
 
 if (save) {
   ggsave(
-    filename = sprintf("%s/currencies_long.eps", savedir),
+    filename = sprintf("%s/currencies_long_training.eps", savedir),
     plot = plot,
     device = "eps",
     width = 8,
-    height = 8
+    height = 6
   )
   ggsave(
-    filename = sprintf("%s/currencies_long.pdf", savedir),
+    filename = sprintf("%s/currencies_long_training.pdf", savedir),
     plot = plot,
     device = "pdf",
     width = 8,
-    height = 8
+    height = 6
   )
 }
 
@@ -363,7 +401,7 @@ if (save) {
 
 
 
-## t_5 distribution
+## calibration using t_5 distribution under the null
 
 df = 5
 
@@ -473,13 +511,13 @@ if (save) {
     plot = plot,
     device = "eps",
     width = 8,
-    height = 8
+    height = 6
   )
   ggsave(
     filename = sprintf("%s/currencies_heavytail.pdf", savedir),
     plot = plot,
     device = "pdf",
     width = 8,
-    height = 8
+    height = 6
   )
 }
