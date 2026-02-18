@@ -9,7 +9,7 @@
 # probability.
 
 
-# Date: 4th of Februare 2026.
+# Date: 18 of February 2026.
 
 MC_ocd_FA <- function(
     dim, false_alarm_prob, N, beta = 1,
