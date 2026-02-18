@@ -1,8 +1,9 @@
 ####### Simulation study #######
-## for the paper 'A general methodology for fast online changepoint detection',
+## for the paper 'A grid-based methodology for fast online changepoint detection',
 ## Per August Jarval Moen, 2026.
 
-## This simulation is for the setting with unknown pre-change mean (=0).
+## This simulation is for the setting with known pre-change mean (=0).
+## For unknown pre-change mean, see simulation_study_nonzero.R
 
 ## Install the CHAD package from GitHub:
 # devtools::install_github("peraugustmoen/CHAD")
@@ -17,7 +18,7 @@ library(patchwork)
 library(ocd)
 
 ## Saving options
-save <- TRUE # if results should be saved
+save <- TRUE # results are saved if TRUE
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
@@ -26,8 +27,8 @@ dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
 
-load_threshes_dir <- ""
-load_results_dir <- ""
+load_threshes_dir <- "" # dir if thresholds are already computed and stored
+load_results_dir <- "" # dir if simulation study results are already stored
 
 # Creating subfolder with current time as name:
 if (save) {
@@ -58,19 +59,18 @@ source(system.file("tuning_competing_methods.R",
 
 
 
-N <- 2000 # length of a single stream
-chgptloc <- round(N / 3)
+N <- 200 # length of a single stream
+chgptloc <- round(N / 3) #changepoint location
 num_sim <- 1000 # number of iterations in the simulation
-ps <- c(100) # dimensions to be considered
-#ps <- c(100, 1000)
-sparsities <- c(1, 5, 10, 100)
+ps <- c(1000) # dimensions to be considered
+sparsities <- c(1, 10, 100,1000)
 thetas <- seq(0.0, 8.0, by = 0.4)
 num_methods <- 6
-num_cores <- 12
-MC_reps <- 1000
+num_cores <- 6
+MC_reps <- 1000 # number of MC simulations to choose thresholds
 false_alarm_prob <- 0.05
-estimate_mean <- TRUE
-estimate_mean_until <- round(chgptloc/2)
+estimate_mean <- FALSE
+estimate_mean_until <- round(chgptloc / 2)
 constant_penalty <- TRUE
 
 if (!estimate_mean) {
@@ -82,7 +82,7 @@ if (!estimate_mean) {
 if(save)
 {
   paramfile <- sprintf("%s/parameters.txt", savedir)
-  cat("Simulation with pre-change mean UNKNOWN!\n", file = paramfile, append = TRUE)
+  cat("Simulation with pre-change mean zero KNOWN!\n", file = paramfile, append = TRUE)
   cat("Parameters:\n", file = paramfile, append = TRUE)
   cat("N = ", N, " \n", file = paramfile, append = TRUE)
   cat("chgptloc = ", chgptloc, "\n",
@@ -94,6 +94,7 @@ if(save)
       file = paramfile,
       append = TRUE
   )
+
   cat("thetas = ", thetas, "\n", file = paramfile, append = TRUE)
   cat("num_methods = ", num_methods, "\n",
       file = paramfile,
@@ -168,7 +169,7 @@ if (!identical(load_threshes_dir, "")) {
                                        est_length = estimate_mean_until, MC_reps = MC_reps, seed = 123
     )
 
-    thresholds[[6]][[v]] <- MC_mdfocus_nonzeromean_FA(p,
+    thresholds[[6]][[v]] <- MC_mdfocus_FA(p,
                                           false_alarm_prob = false_alarm_prob, N = N,
                                           MC_reps = MC_reps, seed = 123
     )
@@ -194,7 +195,6 @@ if (!identical(load_results_dir, "")) {
     library(CHAD)
     library(ocd)
   })
-  # Export plain R objects your workers need
   snow::clusterExport(cl, c(
     "ps","sparsities","thetas","thresholds","N","num_methods",
     "chgptloc","constant_penalty","estimate_mean","estimate_mean_until"
@@ -211,7 +211,12 @@ if (!identical(load_results_dir, "")) {
     ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
     data = data.frame(t(ys))
     sparsity_levels <- 2^seq_len(floor(log2(p)))
-    res = FocusCH_HighDim(data, get_opt_cost = \(...) get_partial_opt(..., which_par = sparsity_levels), threshold = thresholds[[6]][[1]])
+    res = FocusCH_HighDim(data, get_opt_cost = \(...)
+                          get_partial_opt(..., cost=cost_lr_partial0, which_par =
+                                            sparsity_levels),
+                          dim_indexes = as.list(1:ncol(data)),
+                          common_ratio_step = 1.3,
+                          threshold = thresholds[[6]][[1]])
     tt <- which(res$nb_at_step == 0)[1]
   })
 
@@ -220,10 +225,12 @@ if (!identical(load_results_dir, "")) {
   progress <- function(n) setTxtProgressBar(pb, n)
   opts <- list(progress = progress)
 
-  #registerDoSEQ()
+  # functions that should NOT be exported from global env
   rcpp_funcs <- c(
-    "FocusCH_HighDim",        # add all functions defined by your sourced scripts that touch Rcpp
-    "get_partial_opt")
+    "FocusCH_HighDim",
+    "get_partial_opt",
+    "cost_lr_partial0"
+  )
   results <- foreach(
     z = 1:num_sim,
     .combine = function(...) abind::abind(..., along = 5),
@@ -241,7 +248,8 @@ if (!identical(load_results_dir, "")) {
       for (v in 1:length(ps)) {
         p <- ps[v]
         for (j in 1:length(sparsities)) {
-          s = sparsities[j]
+          s <- sparsities[j]
+
           for (t in 1:length(thetas)) {
             theta <- thetas[t]
             ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
@@ -322,11 +330,12 @@ if (!identical(load_results_dir, "")) {
 
 
             dat = data.frame(t(ys))
-            res = FocusCH_HighDim(dat, get_opt_cost = \(...)
-                  get_partial_opt(..., which_par = sparsity_levels),
-                  #dim_indexes = as.list(1:ncol(dat)),
-                  #common_ratio_step = 1.3,
-                  threshold = thresholds[[6]][[v]])
+            res = FocusCH_HighDim(dat,
+                                  get_opt_cost = \(...) get_partial_opt(...,
+                                                                        cost=cost_lr_partial0, which_par = sparsity_levels),
+                                  #dim_indexes = as.list(1:ncol(dat)),
+                                  #common_ratio_step = 1.3,
+                                  threshold = thresholds[[6]][[v]])
             tt <- which(res$nb_at_step == 0)[1]
             detect_time <- ifelse(is.na(tt), N, tt - 1)
             result_array[v, j, t, 6] <- detect_time
