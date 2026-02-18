@@ -46,7 +46,7 @@ dat <- load_exchange_rates()
 keep_inds <- 1:11
 dat <- dat[, keep_inds]
 colnames(dat) <- c(
-  "date", dat[3,2:11]
+  "date", dat[3, 2:11]
 )
 dat <- dat[-(1:5), ] # removing info columns
 dat[dat == "ND"] <- NA
@@ -95,7 +95,7 @@ plot
 
 p <- ncol(dat_diff) - 1
 N <- nrow(dat_diff)
-N_obs = N
+N_obs <- N
 
 # estimate baseline noise level from first year of data:
 trainingdata <- dat_diff[
@@ -116,7 +116,7 @@ critical_value <- MC_covariance(
   baseline_operatornorm = 1,
   seed = 102102
 )
-#critical_value = 6.039568
+# critical_value = 6.039568
 
 
 detector <- CHAD(p,
@@ -146,9 +146,9 @@ for (i in 1:N) {
 dates <- dat_diff$date
 
 cat("Changpoint detected at:\n")
-dates[changepoints] +1 # plus one since we took a diff
+dates[changepoints] + 1 # plus one since we took a diff
 cat("Candidate changepoint location where the change was flagged:\n")
-dates[changepoints - argmax] +1 # plus one since we took a diff
+dates[changepoints - argmax] + 1 # plus one since we took a diff
 
 # Interactive plot of exchange rates with changepoint declarations:
 plot <- plot_ly(df_long,
@@ -161,10 +161,9 @@ plot <- plot_ly(df_long,
   )
 
 
-
 shapes <- list()
 for (i in 1:length(changepoints)) {
-  cp <- dates[changepoints[i]]+1 #plus one since we took a diff
+  cp <- dates[changepoints[i]] + 1 # plus one since we took a diff
   shapes <- append(shapes, list(
     list(
       type = "line",
@@ -184,14 +183,13 @@ df_diff_long <- dat_diff %>%
   pivot_longer(cols = -date, names_to = "series", values_to = "value")
 # Plotly plot with vertical lines at changepoints
 plot <- plot_ly(df_diff_long,
-                x = ~date, y = ~value, color = ~series,
-                type = "scatter", mode = "lines"
+  x = ~date, y = ~value, color = ~series,
+  type = "scatter", mode = "lines"
 ) %>%
   layout(
     xaxis = list(title = "Date"),
     yaxis = list(title = "Value")
   )
-
 
 
 shapes <- list()
@@ -211,9 +209,6 @@ for (i in 1:length(changepoints)) {
 }
 plot <- plot %>% layout(shapes = shapes)
 plot
-
-
-
 
 
 # ggplot for nice pdf and eps output
@@ -239,7 +234,7 @@ cp_dates <- dates[changepoints]
 
 for (i in 1:length(cp_dates)) {
   plot <- plot + geom_vline(
-    xintercept = as.numeric(cp_dates[i]+1), # plus one since we took a diff
+    xintercept = as.numeric(cp_dates[i] + 1), # plus one since we took a diff
     color = "red", linetype = "dashed"
   )
 }
@@ -264,12 +259,6 @@ if (save) {
 }
 
 
-
-
-
-
-
-
 ## Gaussian distribution with long training period
 
 # Choose critical value via MC simulation with isotropic Gaussian noise,
@@ -286,8 +275,8 @@ critical_value_long <- MC_covariance(
 # critical_value_long = 6.146377
 
 detector <- CHAD(p,
-                 method = "covariance", leading_constant = critical_value_long,
-                 estimate_mean = FALSE, baseline_operatornorm = baseline_op
+  method = "covariance", leading_constant = critical_value_long,
+  estimate_mean = FALSE, baseline_operatornorm = baseline_op
 )
 
 teststats <- rep(NA, N)
@@ -312,14 +301,14 @@ for (i in 1:N) {
 dates <- dat_diff$date
 
 cat("Changpoint detected at:\n")
-dates[changepoints] +1 # plus one since we took a diff
+dates[changepoints] + 1 # plus one since we took a diff
 cat("Candidate changepoint location where the change was flagged:\n")
-dates[changepoints - argmax] +1 # plus one since we took a diff
+dates[changepoints - argmax] + 1 # plus one since we took a diff
 
 # Plotly plot with vertical lines at changepoints
 plot <- plot_ly(df_long,
-                x = ~date, y = ~value, color = ~series,
-                type = "scatter", mode = "lines"
+  x = ~date, y = ~value, color = ~series,
+  type = "scatter", mode = "lines"
 ) %>%
   layout(
     xaxis = list(title = "Date"),
@@ -328,7 +317,7 @@ plot <- plot_ly(df_long,
 
 shapes <- list()
 for (i in 1:length(changepoints)) {
-  cp <- dates[changepoints[i]]+1 #plus one since we took a diff
+  cp <- dates[changepoints[i]] + 1 # plus one since we took a diff
   # print(cp)
   shapes <- append(shapes, list(
     list(
@@ -368,7 +357,7 @@ cp_dates <- dates[changepoints]
 
 for (i in 1:length(cp_dates)) {
   plot <- plot + geom_vline(
-    xintercept = as.numeric(cp_dates[i]+1), # plus one since we took a diff
+    xintercept = as.numeric(cp_dates[i] + 1), # plus one since we took a diff
     color = "red", linetype = "dashed"
   )
 }
@@ -393,17 +382,9 @@ if (save) {
 }
 
 
-
-
-
-
-
-
-
-
 ## calibration using t_5 distribution under the null
 
-df = 5
+df <- 5
 
 critical_value_heavytail <- MC_covariance_heavytail(
   p = p, false_alarm_prob = 0.05,
@@ -416,8 +397,8 @@ critical_value_heavytail <- MC_covariance_heavytail(
 # critical_value_heavytail = 19.09366
 
 detector <- CHAD(p,
-                 method = "covariance", leading_constant = critical_value_heavytail,
-                 estimate_mean = FALSE, baseline_operatornorm = baseline_op
+  method = "covariance", leading_constant = critical_value_heavytail,
+  estimate_mean = FALSE, baseline_operatornorm = baseline_op
 )
 
 teststats <- rep(NA, N)
@@ -442,14 +423,14 @@ for (i in 1:N) {
 dates <- dat_diff$date
 
 cat("Changpoint detected at:\n")
-dates[changepoints] +1 # plus one since we took a diff
+dates[changepoints] + 1 # plus one since we took a diff
 cat("Candidate changepoint location where the change was flagged:\n")
-dates[changepoints - argmax] +1 # plus one since we took a diff
+dates[changepoints - argmax] + 1 # plus one since we took a diff
 
 # Plotly plot with vertical lines at changepoints
 plot <- plot_ly(df_long,
-                x = ~date, y = ~value, color = ~series,
-                type = "scatter", mode = "lines"
+  x = ~date, y = ~value, color = ~series,
+  type = "scatter", mode = "lines"
 ) %>%
   layout(
     xaxis = list(title = "Date"),
@@ -458,7 +439,7 @@ plot <- plot_ly(df_long,
 
 shapes <- list()
 for (i in 1:length(changepoints)) {
-  cp <- dates[changepoints[i]]+1 #plus one since we took a diff
+  cp <- dates[changepoints[i]] + 1 # plus one since we took a diff
   # print(cp)
   shapes <- append(shapes, list(
     list(
@@ -498,7 +479,7 @@ cp_dates <- dates[changepoints]
 
 for (i in 1:length(cp_dates)) {
   plot <- plot + geom_vline(
-    xintercept = as.numeric(cp_dates[i]+1), # plus one since we took a diff
+    xintercept = as.numeric(cp_dates[i] + 1), # plus one since we took a diff
     color = "red", linetype = "dashed"
   )
 }
