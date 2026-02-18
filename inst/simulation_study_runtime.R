@@ -144,8 +144,8 @@ if (!estimate_mean) {
       startt <- proc.time()
       res = FocusCH_HighDim(dat, get_opt_cost = \(...) get_partial_opt(...,
                                                                        cost=cost_lr_partial0, which_par = sparsity_levels),
-                            dim_indexes = as.list(1:ncol(dat)),
-                            common_ratio_step = 1.3,
+                            #dim_indexes = as.list(1:ncol(dat)),
+                            #common_ratio_step = 1.3,
                             threshold = rep(Inf, 2+length(sparsity_levels)))
       endd <- proc.time()
       runtimes_n[6, j] <- runtimes_n[6, j] +
@@ -174,6 +174,12 @@ if (!estimate_mean) {
 }
 
 matplot(t(runtimes_n), type="l", col = 1:6, lty= 1:6)
+legend("topleft", legend=c("CHAD", "OCD", "Mei", "XS", "Chan", "mdfocus"),
+       col=1:6, lty=1:6)
+
+plot(runtimes_n[6,])
+
+matplot(t(memory_n), type="l", col = 1:6, lty= 1:6)
 legend("topleft", legend=c("CHAD", "OCD", "Mei", "XS", "Chan", "mdfocus"),
        col=1:6, lty=1:6)
 
@@ -534,14 +540,14 @@ if (save) {
     plot = combined_plot,
     device = "eps",
     width = 7,
-    height = 5
+    height = 6
   )
   ggsave(
     filename = sprintf("%s/combined_runtime.pdf", plotdir),
     plot = combined_plot,
     device = "pdf",
     width = 7,
-    height = 5
+    height = 6
   )
 }
 
@@ -798,14 +804,14 @@ if (save) {
     plot = combined_plot,
     device = "eps",
     width = 7,
-    height = 5
+    height = 6
   )
   ggsave(
     filename = sprintf("%s/combined_runtime_relative.pdf", plotdir),
     plot = combined_plot,
     device = "pdf",
     width = 7,
-    height = 5
+    height = 6
   )
 }
 

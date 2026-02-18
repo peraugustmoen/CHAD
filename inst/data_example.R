@@ -7,7 +7,7 @@
 
 
 ## Saving options
-save <- TRUE # if results should be saved
+save <- FALSE # if results should be saved
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
@@ -95,6 +95,7 @@ plot
 
 p <- ncol(dat_diff) - 1
 N <- nrow(dat_diff)
+N_obs = N
 
 # estimate baseline noise level from first year of data:
 trainingdata <- dat_diff[
@@ -115,7 +116,8 @@ critical_value <- MC_covariance(
   baseline_operatornorm = 1,
   seed = 102102
 )
-# critical_value = 4.820648
+#critical_value = 6.039568
+
 
 detector <- CHAD(p,
   method = "covariance", leading_constant = critical_value,
@@ -225,6 +227,142 @@ if (save) {
 }
 
 
+
+
+
+
+
+
+## Gaussian distribution with long training period
+
+# Choose critical value via MC simulation with isotropic Gaussian noise,
+# with 5% false alarm probability tolerance
+
+critical_value_long <- MC_covariance(
+  p = p, false_alarm_prob = 0.05,
+  constant_penalty = FALSE, MC_reps = 1000, N = 10000,
+  estimate_mean = FALSE,
+  baseline_operatornorm = 1,
+  seed = 102102
+)
+
+
+detector <- CHAD(p,
+                 method = "covariance", leading_constant = critical_value_long,
+                 estimate_mean = FALSE, baseline_operatornorm = baseline_op
+)
+
+teststats <- rep(NA, N)
+changepoints <- c()
+argmax <- c()
+counter <- 0
+for (i in 1:N) {
+  counter <- counter + 1
+  y_new <- as.numeric(dat_diff[i, 2:ncol(dat_diff)])
+  detector <- CHAD::getData(detector, y_new)
+  if (counter > 1) {
+    teststats[i] <- attr(detector, "statistics")
+  }
+  if (!identical(status(detector), "monitoring")) {
+    changepoints <- c(changepoints, i)
+    argmax <- c(argmax, attr(detector, "allstats")$argmax)
+    detector <- CHAD::reset(detector)
+    counter <- 0
+  }
+}
+
+dates <- dat_diff$date
+
+cat("Changpoint detected at:\n")
+dates[changepoints] +1 # plus one since we took a diff
+cat("Candidate changepoint location where the change was flagged:\n")
+dates[changepoints - argmax] +1 # plus one since we took a diff
+
+# Plotly plot with vertical lines at changepoints
+plot <- plot_ly(df_long,
+                x = ~date, y = ~value, color = ~series,
+                type = "scatter", mode = "lines"
+) %>%
+  layout(
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Value")
+  )
+
+shapes <- list()
+for (i in 1:length(changepoints)) {
+  cp <- dates[changepoints[i]]+1 #plus one since we took a diff
+  # print(cp)
+  shapes <- append(shapes, list(
+    list(
+      type = "line",
+      x0 = cp, x1 = cp,
+      y0 = 0, y1 = 1, # Using relative coordinates for y-axis
+      xref = "x", # Reference x and y axes
+      yref = "paper", # yref = 'paper' uses the whole plot height
+      line = list(color = "red", dash = "dash")
+    )
+  ))
+}
+plot <- plot %>% layout(shapes = shapes)
+plot
+
+
+# ggplot for nice pdf and eps output
+line_types <- c(
+  "solid", "dashed", "dotted", "dotdash", "longdash",
+  "twodash", "solid", "dashed", "dotted", "dotdash"
+)
+
+plot <- ggplot(df_long, aes(
+  x = date, y = value, color = series,
+  linetype = series
+)) +
+  geom_line() +
+  labs(x = "Date", y = "Exchange rate to USD") +
+  theme_bw()
+plot <- plot + theme(
+  legend.position = "bottom", # Position the legend at the bottom
+  legend.title = element_blank() # Remove the legend title
+)
+plot
+
+cp_dates <- dates[changepoints]
+
+for (i in 1:length(cp_dates)) {
+  plot <- plot + geom_vline(
+    xintercept = as.numeric(cp_dates[i]+1), # plus one since we took a diff
+    color = "red", linetype = "dashed"
+  )
+}
+
+print(plot)
+
+if (save) {
+  ggsave(
+    filename = sprintf("%s/currencies_long.eps", savedir),
+    plot = plot,
+    device = "eps",
+    width = 8,
+    height = 8
+  )
+  ggsave(
+    filename = sprintf("%s/currencies_long.pdf", savedir),
+    plot = plot,
+    device = "pdf",
+    width = 8,
+    height = 8
+  )
+}
+
+
+
+
+
+
+
+
+
+
 ## t_5 distribution
 
 df = 5
@@ -331,14 +469,14 @@ print(plot)
 
 if (save) {
   ggsave(
-    filename = sprintf("%s/currencies.eps", savedir),
+    filename = sprintf("%s/currencies_heavytail.eps", savedir),
     plot = plot,
     device = "eps",
     width = 8,
     height = 8
   )
   ggsave(
-    filename = sprintf("%s/currencies.pdf", savedir),
+    filename = sprintf("%s/currencies_heavytail.pdf", savedir),
     plot = plot,
     device = "pdf",
     width = 8,

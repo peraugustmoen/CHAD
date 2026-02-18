@@ -1,6 +1,7 @@
-The file inst/tuning_competing_methods.R contains code borrowed and modified from the R package 'ocd: High-Dimensional Multiscale Online Changepoint Detection' available at https://CRAN.R-project.org/package=ocd, which is licensed under the GPL-3 license. The structure of the package CHAD has also been inspired by the structure of the package 'ocd'.
+The file inst/tuning_competing_methods.R contains code borrowed and modified from the R package 'ocd: High-Dimensional Multiscale Online Changepoint Detection' available at https://CRAN.R-project.org/package=ocd, which is licensed under the GPL-3 license. The structure of the package CHAD has also been inspired by the structure of the package 'ocd'. The file inst/tuning_competing_methods.R also contains code borrowed and modified from the Github Repository 'Focused' (https://github.com/guillemr/Focused), which is also licensed under the GPL-3 license. The file 'MdFocus_MeanGaussian_md.R' is copied directly from the Github Repository 'Focused'. 
 
-Original authors: Yudong Chen, Tengyao Wang, Richard J. Samworth
+Original authors: Yudong Chen, Tengyao Wang, Richard J. Samworth (ocd), 
+Gaetano Romano, Liudmila Pishchagina and Guillem Rigaill (Focused)
 
 Modifications have been performed by Per August Jarval Moen.
 

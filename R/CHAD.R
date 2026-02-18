@@ -747,10 +747,12 @@ MC_covariance <- function(p, false_alarm_prob, constant_penalty, MC_reps, N,
                           min_prechange_obs = 1,
                           baseline_operatornorm = NA,
                           seed = 123) {
-  set.seed(seed)
+
   max_statistics <- rep(NA, MC_reps)
   cat("Running MC simulation for covarianceDetector\n")
+
   for (j in 1:MC_reps) {
+    set.seed(seed + j)
     if (j %% 100 == 0) {
       cat("Iteration: ", j, "\n")
     }
@@ -764,6 +766,7 @@ MC_covariance <- function(p, false_alarm_prob, constant_penalty, MC_reps, N,
     ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
     for (i in 1:N) {
       detector <- getData(detector, ys[, i])
+
     }
     max_statistics[j] <- attr(detector, "overall_max_statistics")
   }
