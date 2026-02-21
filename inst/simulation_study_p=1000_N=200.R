@@ -3,7 +3,6 @@
 ## Per August Jarval Moen, 2026.
 
 ## This simulation is for the setting with known pre-change mean (=0).
-## For unknown pre-change mean, see simulation_study_nonzero.R
 
 ## Install the CHAD package from GitHub:
 # devtools::install_github("peraugustmoen/CHAD")
