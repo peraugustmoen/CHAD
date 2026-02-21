@@ -1,5 +1,5 @@
 ####### Real data example #######
-## for the paper 'A general methodology for fast online changepoint detection',
+## for the paper 'A grid-based methodology for fast online changepoint detection',
 ## Per August Jarval Moen, 2026.
 
 ## Install the CHAD package from GitHub:

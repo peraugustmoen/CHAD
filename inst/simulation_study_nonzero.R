@@ -1,5 +1,5 @@
 ####### Simulation study #######
-## for the paper 'A general methodology for fast online changepoint detection',
+## for the paper 'A grid-based methodology for fast online changepoint detection',
 ## Per August Jarval Moen, 2026.
 
 ## This simulation is for the setting with unknown pre-change mean (=0).
