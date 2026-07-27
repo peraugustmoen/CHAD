@@ -9,12 +9,11 @@
 # probability.
 
 
-# Date: 18 of February 2026.
-
 MC_ocd_FA <- function(
-    dim, false_alarm_prob, N, beta = 1,
-    sparsity = "auto", MC_reps,
-    est_length = 0, seed = 123) {
+  dim, false_alarm_prob, N, beta = 1,
+  sparsity = "auto", MC_reps,
+  est_length = 0, seed = 123
+) {
   set.seed(seed)
   N <- N - est_length
   peak_stat <- matrix(0, MC_reps, 3)
@@ -56,9 +55,11 @@ MC_ocd_FA <- function(
   return(th)
 }
 
-MC_Mei_FA <- function(dim, false_alarm_prob, N, beta = 1,
-    b = beta / sqrt(dim), MC_reps,
-    est_length = 0, seed = 123) {
+MC_Mei_FA <- function(
+  dim, false_alarm_prob, N, beta = 1,
+  b = beta / sqrt(dim), MC_reps,
+  est_length = 0, seed = 123
+) {
   set.seed(seed)
   N <- N - est_length
   peak_stat <- matrix(0, MC_reps, 2)
@@ -99,9 +100,10 @@ MC_Mei_FA <- function(dim, false_alarm_prob, N, beta = 1,
 }
 
 MC_XS_FA <- function(
-    dim, false_alarm_prob, N, p0 = 1 / sqrt(dim),
-    w = 200, MC_reps,
-    est_length = 0, seed = 123) {
+  dim, false_alarm_prob, N, p0 = 1 / sqrt(dim),
+  w = 200, MC_reps,
+  est_length = 0, seed = 123
+) {
   set.seed(seed)
   N <- N - est_length
   peak_stat <- rep(-Inf, MC_reps)
@@ -137,10 +139,11 @@ MC_XS_FA <- function(
 }
 
 MC_Chan_FA <- function(
-    dim, false_alarm_prob, N,
-    p0 = 1 / sqrt(dim), w = 200,
-    lambda = sqrt(8) - 2, MC_reps,
-    est_length = 0, seed = 123) {
+  dim, false_alarm_prob, N,
+  p0 = 1 / sqrt(dim), w = 200,
+  lambda = sqrt(8) - 2, MC_reps,
+  est_length = 0, seed = 123
+) {
   set.seed(seed)
   N <- N - est_length
   peak_stat <- rep(-Inf, MC_reps)
@@ -177,63 +180,69 @@ MC_Chan_FA <- function(
   return(th)
 }
 
-source(system.file("MdFocus_MeanGaussian_md.R",
-                   package = "CHAD"))
-#source("inst/MdFocus_MeanGaussian_md.R")
-MC_mdfocus_FA <- function(dim, false_alarm_prob, N, MC_reps, seed = 123){
+## Source the R implementation of (sparsity-adaptive) MdFOCuS from the
+## installed CHAD package:
+source(system.file("MdFocus_MeanGaussian_md.R", package = "CHAD"))
+MC_mdfocus_FA <- function(dim, false_alarm_prob, N, MC_reps, seed = 123) {
   cat("Running MC simulation for mdfocus\n")
   set.seed(seed)
   p <- dim
 
-  #sparsity_levels = 2^1, 2^2, ..., 2^{floor(log_2(p))}:
+  # sparsity_levels = 2^1, 2^2, ..., 2^{floor(log_2(p))}:
   sparsity_levels <- 2^seq_len(floor(log2(p)))
 
-  ll = list() #storing maximum statistics for each MC sample
+  ll <- list() # storing maximum statistics for each MC sample
 
   for (k in 1:MC_reps) {
     if (k %% 100 == 0) {
       cat("Iteration: ", k, "\n")
     }
-    data = data.frame(matrix(rnorm(N*p), nrow=N, ncol=p))
-    res = FocusCH_HighDim(data, get_opt_cost = \(...) get_partial_opt(...,
-          cost=cost_lr_partial0, which_par = sparsity_levels),
-          #dim_indexes = as.list(1:ncol(data)),
-          #common_ratio_step = 1.3,
-          threshold = rep(Inf, 2+length(sparsity_levels)))
-    res = - (res$opt.cost |> reduce(rbind)) |> apply(2, max)
-    ll[[k]] = res
+    data <- data.frame(matrix(rnorm(N * p), nrow = N, ncol = p))
+    res <- FocusCH_HighDim(data,
+      get_opt_cost = \(...) get_partial_opt(...,
+        cost = cost_lr_partial0, which_par = sparsity_levels
+      ),
+      # dim_indexes = as.list(1:ncol(data)),
+      # common_ratio_step = 1.3,
+      threshold = rep(Inf, 2 + length(sparsity_levels))
+    )
+    res <- -(res$opt.cost |> reduce(rbind)) |> apply(2, max)
+    ll[[k]] <- res
   }
-  rr2 = reduce(ll, rbind)
+  rr2 <- reduce(ll, rbind)
 
-  quant <- false_alarm_prob/ncol(rr2) #quantile with Bonferroni correction
+  quant <- false_alarm_prob / ncol(rr2) # quantile with Bonferroni correction
 
-  thresholds_mdfocus <- apply(rr2, 2, quantile, probs = 1-quant)
+  thresholds_mdfocus <- apply(rr2, 2, quantile, probs = 1 - quant)
 
   return(thresholds_mdfocus)
 }
 
-MC_mdfocus_nonzeromean_FA <- function(dim, false_alarm_prob, N, MC_reps, seed = 123){
+MC_mdfocus_nonzeromean_FA <- function(dim, false_alarm_prob, N, MC_reps, seed = 123) {
   cat("Running MC simulation for mdfocus\n")
   set.seed(seed)
   p <- dim
-  #sparsity_levels = 2^1, 2^2, ..., 2^{floor(log_2(p))}:
+  # sparsity_levels = 2^1, 2^2, ..., 2^{floor(log_2(p))}:
   sparsity_levels <- 2^seq_len(floor(log2(p)))
-  ll = list()
+  ll <- list()
   for (k in 1:MC_reps) {
     if (k %% 100 == 0) {
       cat("Iteration: ", k, "\n")
     }
-    data = data.frame(matrix(rnorm(N*p), nrow=N, ncol=p))
-    res = FocusCH_HighDim(data, get_opt_cost = \(...) get_partial_opt(...,
-          which_par = sparsity_levels),
-          #dim_indexes = as.list(1:ncol(data)),
-          #common_ratio_step = 1.3,
-          threshold = rep(Inf, 2+length(sparsity_levels)))
-    res = - (res$opt.cost |> reduce(rbind)) |> apply(2, max)
-    ll[[k]] = res
+    data <- data.frame(matrix(rnorm(N * p), nrow = N, ncol = p))
+    res <- FocusCH_HighDim(data,
+      get_opt_cost = \(...) get_partial_opt(...,
+        which_par = sparsity_levels
+      ),
+      # dim_indexes = as.list(1:ncol(data)),
+      # common_ratio_step = 1.3,
+      threshold = rep(Inf, 2 + length(sparsity_levels))
+    )
+    res <- -(res$opt.cost |> reduce(rbind)) |> apply(2, max)
+    ll[[k]] <- res
   }
-  rr2 = reduce(ll, rbind)
-  quant <- false_alarm_prob/ncol(rr2)
-  thresholds_mdfocus <- apply(rr2, 2, quantile, probs = 1-quant)
+  rr2 <- reduce(ll, rbind)
+  quant <- false_alarm_prob / ncol(rr2)
+  thresholds_mdfocus <- apply(rr2, 2, quantile, probs = 1 - quant)
   return(thresholds_mdfocus)
 }

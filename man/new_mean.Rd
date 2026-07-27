@@ -10,7 +10,8 @@ new_mean(
   baseline_sd,
   constant_penalty,
   min_prechange_obs,
-  estimate_mean
+  estimate_mean,
+  pure_R = FALSE
 )
 }
 \arguments{
@@ -31,6 +32,11 @@ critical values should be constant with respect to the sample size or not}
 
 \item{estimate_mean}{Boolean indicating whether mean-centering should be
 performed or if pre-change mean should be assumed to be zero}
+
+\item{pure_R}{Boolean indicating whether the test statistics should be
+computed in pure (interpreted) R code instead of in C. The two
+implementations compute the same quantities and agree up to floating point
+error}
 }
 \value{
 An object of subclass 'meanDetector' of class 'CHAD'

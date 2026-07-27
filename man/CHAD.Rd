@@ -15,7 +15,8 @@ CHAD(
   min_prechange_obs = 1,
   false_alarm_prob = 0.05,
   MC_reps = 100,
-  N = 1000
+  N = 1000,
+  pure_R = FALSE
 )
 }
 \arguments{
@@ -61,6 +62,13 @@ Only required when \code{leading_constant='MC'}}
 
 \item{N}{Maximum sample size of which Monte Carlo simulations are performed.
 Only required when \code{leading_constant='MC'}}
+
+\item{pure_R}{Boolean indicating whether the test statistics should be
+computed in pure (interpreted) R code instead of in C. Only applicable when
+\code{method = "mean"} (the covariance detector contains no compiled code).
+The two implementations compute the same quantities and agree up to
+floating point error; the option exists to enable run time comparisons
+with methods implemented in interpreted languages}
 }
 \value{
 An object of class 'CHAD' with the following attributes:

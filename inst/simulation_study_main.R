@@ -54,15 +54,15 @@ if (save) {
 
 
 
-source(system.file("tuning_competing_methods.R",
-                   package = "CHAD"))
+source(system.file("tuning_competing_methods.R", package = "CHAD"))
+source(system.file("plot_style.R", package = "CHAD")) # shared colors/line types for all plots
 
 
 
 
 
 N <- 2000 # length of a single stream
-chgptloc <- round(N / 3) #changepoint location
+chgptloc <- round(N / 3) # changepoint location
 num_sim <- 1000 # number of iterations in the simulation
 ps <- c(100) # dimensions to be considered
 sparsities <- c(1, 5, 10, 100)
@@ -81,8 +81,7 @@ if (!estimate_mean) {
 
 
 ## print parameters to file
-if(save)
-{
+if (save) {
   paramfile <- sprintf("%s/parameters.txt", savedir)
   cat("Simulation with pre-change mean zero KNOWN!\n", file = paramfile, append = TRUE)
   cat("Parameters:\n", file = paramfile, append = TRUE)
@@ -172,8 +171,8 @@ if (!identical(load_threshes_dir, "")) {
     )
 
     thresholds[[6]][[v]] <- MC_mdfocus_FA(p,
-                                       false_alarm_prob = false_alarm_prob, N = N,
-                                        MC_reps = MC_reps, seed = 123
+      false_alarm_prob = false_alarm_prob, N = N,
+      MC_reps = MC_reps, seed = 123
     )
   }
   if (save) {
@@ -198,25 +197,27 @@ if (!identical(load_results_dir, "")) {
     library(ocd)
   })
   snow::clusterExport(cl, c(
-    "ps","sparsities","thetas","thresholds","N","num_methods",
-    "chgptloc","constant_penalty","estimate_mean","estimate_mean_until"
+    "ps", "sparsities", "thetas", "thresholds", "N", "num_methods",
+    "chgptloc", "constant_penalty", "estimate_mean", "estimate_mean_until"
   ))
   snow::clusterEvalQ(cl, {
-    source(system.file("tuning_competing_methods.R",
-                       package = "CHAD"))
-    source(system.file("MdFocus_MeanGaussian_md.R",
-                       package = "CHAD"))
+    source(system.file("tuning_competing_methods.R", package = "CHAD"))
+    source(system.file("MdFocus_MeanGaussian_md.R", package = "CHAD"))
     TRUE
   })
   snow::clusterEvalQ(cl, {
-    p = ps[1]
+    p <- ps[1]
     ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
-    data = data.frame(t(ys))
+    data <- data.frame(t(ys))
     sparsity_levels <- 2^seq_len(floor(log2(p)))
-    res = FocusCH_HighDim(data, get_opt_cost = \(...)
-          get_partial_opt(..., cost=cost_lr_partial0, which_par =
-                            sparsity_levels),
-          threshold = thresholds[[6]][[1]])
+    res <- FocusCH_HighDim(data,
+      get_opt_cost = \(...)
+      get_partial_opt(...,
+        cost = cost_lr_partial0, which_par =
+          sparsity_levels
+      ),
+      threshold = thresholds[[6]][[1]]
+    )
     tt <- which(res$nb_at_step == 0)[1]
   })
 
@@ -235,10 +236,9 @@ if (!identical(load_results_dir, "")) {
     z = 1:num_sim,
     .combine = function(...) abind::abind(..., along = 5),
     .multicombine = TRUE, .options.snow = opts,
-    .packages = c("CHAD","ocd","geometry","purrr","Rcpp","abind"),
+    .packages = c("CHAD", "ocd", "geometry", "purrr", "Rcpp", "abind"),
     .noexport = rcpp_funcs
   ) %dopar% {
-
     set.seed(z + 1000)
     result_array <- array(NA, dim = c(
       length(ps), length(sparsities), length(thetas),
@@ -316,24 +316,26 @@ if (!identical(load_results_dir, "")) {
             }
 
             ## mdfocus
-            if(!exists("FocusCH_HighDim")){
+            if (!exists("FocusCH_HighDim")) {
               stop("Function FocusCH_HighDim not found")
             }
-            if(!exists("get_partial_opt")){
+            if (!exists("get_partial_opt")) {
               stop("Function get_partial_opt not found")
             }
-            if(!exists("cost_lr_partial0")){
+            if (!exists("cost_lr_partial0")) {
               stop("Function cost_lr_partial0 not found")
             }
 
             sparsity_levels <- 2^seq_len(floor(log2(p)))
 
 
-            dat = data.frame(t(ys))
-            res = FocusCH_HighDim(dat,
-                  get_opt_cost = \(...) get_partial_opt(...,
-                      cost=cost_lr_partial0, which_par = sparsity_levels),
-                      threshold = thresholds[[6]][[v]])
+            dat <- data.frame(t(ys))
+            res <- FocusCH_HighDim(dat,
+              get_opt_cost = \(...) get_partial_opt(...,
+                cost = cost_lr_partial0, which_par = sparsity_levels
+              ),
+              threshold = thresholds[[6]][[v]]
+            )
             tt <- which(res$nb_at_step == 0)[1]
             detect_time <- ifelse(is.na(tt), N, tt - 1)
             result_array[v, j, t, 6] <- detect_time
@@ -380,7 +382,7 @@ lines(thetas, apply(results[p_ind, s_ind, , 5, ] - chgptloc, 1, meanabove),
   type = "l", col = 5
 )
 lines(thetas, apply(results[p_ind, s_ind, , 6, ] - chgptloc, 1, meanabove),
-      type = "l", col = 6
+  type = "l", col = 6
 )
 
 
@@ -423,14 +425,8 @@ for (p_ind in 1:length(ps)) {
       aes(x = x, y = y, color = Method, linetype = Method)
     ) +
       geom_line() + # Plot lines
-      scale_color_manual(values = c(
-        "black", "blue",
-        "green", "purple", "orange", "red"
-      )) + # Custom colors
-      scale_linetype_manual(values = c(
-        "solid", "dashed",
-        "longdash", "dotdash", "twodash", "dotted"
-      )) +
+      scale_color_manual(values = method_colors) + # shared style (plot_style.R)
+      scale_linetype_manual(values = method_linetypes) +
       theme_bw() +
       theme(legend.position = "right") +
       scale_y_continuous(limits = c(0, N - chgptloc)) +
@@ -463,7 +459,6 @@ for (p_ind in 1:length(ps)) {
 
   if (save) {
     for (j in 1:length(sparsities)) {
-
       ss <- sparsities[j]
 
       ggsave(
@@ -509,7 +504,7 @@ for (p_ind in 1:length(ps)) {
   plots <- list()
   for (i in 1:length(sparsities)) {
     s_ind <- i
-    yy = c(
+    yy <- c(
       apply(results[p_ind, s_ind, , 1, ] - chgptloc, 1, meanabove),
       apply(results[p_ind, s_ind, , 2, ] - chgptloc, 1, meanabove),
       apply(results[p_ind, s_ind, , 3, ] - chgptloc, 1, meanabove),
@@ -518,7 +513,7 @@ for (p_ind in 1:length(ps)) {
       apply(results[p_ind, s_ind, , 6, ] - chgptloc, 1, meanabove)
     )
     yy[is.na(yy)] <- 1
-    yy = log(yy)
+    yy <- log(yy)
     plotdata <- data.frame(
       x = thetas,
       y = yy,
@@ -539,14 +534,8 @@ for (p_ind in 1:length(ps)) {
       aes(x = x, y = y, color = Method, linetype = Method)
     ) +
       geom_line() + # Plot lines
-      scale_color_manual(values = c(
-        "black", "blue",
-        "green", "purple", "orange", "red"
-      )) + # Custom colors
-      scale_linetype_manual(values = c(
-        "solid", "dashed",
-        "longdash", "dotdash", "twodash", "dotted"
-      )) +
+      scale_color_manual(values = method_colors) + # shared style (plot_style.R)
+      scale_linetype_manual(values = method_linetypes) +
       theme_bw() +
       theme(legend.position = "right") +
       scale_y_continuous(limits = c(0, max(yy))) +
@@ -579,7 +568,6 @@ for (p_ind in 1:length(ps)) {
 
   if (save) {
     for (j in 1:length(sparsities)) {
-
       ss <- sparsities[j]
 
       ggsave(
@@ -617,4 +605,3 @@ for (p_ind in 1:length(ps)) {
     )
   }
 }
-

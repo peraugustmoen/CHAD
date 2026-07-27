@@ -53,8 +53,8 @@ if (save) {
 
 
 
-source(system.file("tuning_competing_methods.R",
-                   package = "CHAD"))
+source(system.file("tuning_competing_methods.R", package = "CHAD"))
+source(system.file("plot_style.R", package = "CHAD")) # shared colors/line types for all plots
 
 
 
@@ -71,7 +71,7 @@ num_cores <- 12
 MC_reps <- 1000
 false_alarm_prob <- 0.05
 estimate_mean <- TRUE
-estimate_mean_until <- round(chgptloc/2)
+estimate_mean_until <- round(chgptloc / 2)
 constant_penalty <- TRUE
 
 if (!estimate_mean) {
@@ -80,39 +80,38 @@ if (!estimate_mean) {
 
 
 ## print parameters to file
-if(save)
-{
+if (save) {
   paramfile <- sprintf("%s/parameters.txt", savedir)
   cat("Simulation with pre-change mean UNKNOWN!\n", file = paramfile, append = TRUE)
   cat("Parameters:\n", file = paramfile, append = TRUE)
   cat("N = ", N, " \n", file = paramfile, append = TRUE)
   cat("chgptloc = ", chgptloc, "\n",
-      file = paramfile,
-      append = TRUE
+    file = paramfile,
+    append = TRUE
   )
   cat("ps = ", ps, "\n", file = paramfile, append = TRUE)
   cat("sparsities = ", sparsities, "\n",
-      file = paramfile,
-      append = TRUE
+    file = paramfile,
+    append = TRUE
   )
   cat("thetas = ", thetas, "\n", file = paramfile, append = TRUE)
   cat("num_methods = ", num_methods, "\n",
-      file = paramfile,
-      append = TRUE
+    file = paramfile,
+    append = TRUE
   )
   cat("num_cores = ", num_cores, "\n", file = paramfile, append = TRUE)
   cat("MC_reps = ", MC_reps, "\n", file = paramfile, append = TRUE)
   cat("false_alarm_prob = ", false_alarm_prob, "\n",
-      file = paramfile,
-      append = TRUE
+    file = paramfile,
+    append = TRUE
   )
   cat("estimate_mean = ", estimate_mean, "\n",
-      file = paramfile,
-      append = TRUE
+    file = paramfile,
+    append = TRUE
   )
   cat("constant_penalty = ", constant_penalty, "\n",
-      file = paramfile,
-      append = TRUE
+    file = paramfile,
+    append = TRUE
   )
 }
 
@@ -145,9 +144,9 @@ if (!identical(load_threshes_dir, "")) {
     p <- ps[v]
 
     thresholds[[1]][[v]] <- MC_mean(p, false_alarm_prob,
-                                    constant_penalty = constant_penalty,
-                                    estimate_mean = estimate_mean,
-                                    MC_reps = MC_reps, N = N, seed = 123
+      constant_penalty = constant_penalty,
+      estimate_mean = estimate_mean,
+      MC_reps = MC_reps, N = N, seed = 123
     )
 
     thresholds[[2]][[v]] <- MC_ocd_FA(
@@ -155,22 +154,22 @@ if (!identical(load_threshes_dir, "")) {
       MC_reps = MC_reps, N = N, est_length = estimate_mean_until, seed = 123
     )
     thresholds[[3]][[v]] <- MC_Mei_FA(p,
-                                      false_alarm_prob = false_alarm_prob, N = N, MC_reps = MC_reps,
-                                      est_length = estimate_mean_until, seed = 123
+      false_alarm_prob = false_alarm_prob, N = N, MC_reps = MC_reps,
+      est_length = estimate_mean_until, seed = 123
     )
     thresholds[[4]][[v]] <- MC_XS_FA(p,
-                                     false_alarm_prob = false_alarm_prob, N = N, MC_reps = MC_reps,
-                                     est_length = estimate_mean_until, seed = 123
+      false_alarm_prob = false_alarm_prob, N = N, MC_reps = MC_reps,
+      est_length = estimate_mean_until, seed = 123
     )
 
     thresholds[[5]][[v]] <- MC_Chan_FA(p,
-                                       false_alarm_prob = false_alarm_prob, N = N,
-                                       est_length = estimate_mean_until, MC_reps = MC_reps, seed = 123
+      false_alarm_prob = false_alarm_prob, N = N,
+      est_length = estimate_mean_until, MC_reps = MC_reps, seed = 123
     )
 
     thresholds[[6]][[v]] <- MC_mdfocus_nonzeromean_FA(p,
-                                                      false_alarm_prob = false_alarm_prob, N = N,
-                                                      MC_reps = MC_reps, seed = 123
+      false_alarm_prob = false_alarm_prob, N = N,
+      MC_reps = MC_reps, seed = 123
     )
   }
   if (save) {
@@ -195,22 +194,20 @@ if (!identical(load_results_dir, "")) {
     library(ocd)
   })
   snow::clusterExport(cl, c(
-    "ps","sparsities","thetas","thresholds","N","num_methods",
-    "chgptloc","constant_penalty","estimate_mean","estimate_mean_until"
+    "ps", "sparsities", "thetas", "thresholds", "N", "num_methods",
+    "chgptloc", "constant_penalty", "estimate_mean", "estimate_mean_until"
   ))
   snow::clusterEvalQ(cl, {
-    source(system.file("tuning_competing_methods.R",
-                       package = "CHAD"))
-    source(system.file("MdFocus_MeanGaussian_md.R",
-                       package = "CHAD"))
+    source(system.file("tuning_competing_methods.R", package = "CHAD"))
+    source(system.file("MdFocus_MeanGaussian_md.R", package = "CHAD"))
     TRUE
   })
   snow::clusterEvalQ(cl, {
-    p = ps[1]
+    p <- ps[1]
     ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
-    data = data.frame(t(ys))
+    data <- data.frame(t(ys))
     sparsity_levels <- 2^seq_len(floor(log2(p)))
-    res = FocusCH_HighDim(data, get_opt_cost = \(...) get_partial_opt(..., which_par = sparsity_levels), threshold = thresholds[[6]][[1]])
+    res <- FocusCH_HighDim(data, get_opt_cost = \(...) get_partial_opt(..., which_par = sparsity_levels), threshold = thresholds[[6]][[1]])
     tt <- which(res$nb_at_step == 0)[1]
   })
 
@@ -221,15 +218,15 @@ if (!identical(load_results_dir, "")) {
 
   rcpp_funcs <- c(
     "FocusCH_HighDim",
-    "get_partial_opt")
+    "get_partial_opt"
+  )
   results <- foreach(
     z = 1:num_sim,
     .combine = function(...) abind::abind(..., along = 5),
     .multicombine = TRUE, .options.snow = opts,
-    .packages = c("CHAD","ocd","geometry","purrr","Rcpp","abind"),
+    .packages = c("CHAD", "ocd", "geometry", "purrr", "Rcpp", "abind"),
     .noexport = rcpp_funcs
   ) %dopar% {
-
     set.seed(z + 1000)
     result_array <- array(NA, dim = c(
       length(ps), length(sparsities), length(thetas),
@@ -239,7 +236,7 @@ if (!identical(load_results_dir, "")) {
       for (v in 1:length(ps)) {
         p <- ps[v]
         for (j in 1:length(sparsities)) {
-          s = sparsities[j]
+          s <- sparsities[j]
           for (t in 1:length(thetas)) {
             theta <- thetas[t]
             ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
@@ -247,8 +244,8 @@ if (!identical(load_results_dir, "")) {
               ys[1:s, (chgptloc + 1):N] + theta / sqrt(s)
 
             detector <- CHAD(p,
-                             method = "mean", leading_constant = thresholds[[1]][[v]],
-                             constant_penalty = constant_penalty, estimate_mean = estimate_mean
+              method = "mean", leading_constant = thresholds[[1]][[v]],
+              constant_penalty = constant_penalty, estimate_mean = estimate_mean
             )
             detector_ocd <- ocd::ChangepointDetector(
               dim = p, method = "ocd", thresh = thresholds[[2]][[v]]
@@ -306,23 +303,25 @@ if (!identical(load_results_dir, "")) {
             }
 
             ## mdfocus
-            if(!exists("FocusCH_HighDim")){
+            if (!exists("FocusCH_HighDim")) {
               stop("Function FocusCH_HighDim not found")
             }
-            if(!exists("get_partial_opt")){
+            if (!exists("get_partial_opt")) {
               stop("Function get_partial_opt not found")
             }
-            if(!exists("cost_lr_partial0")){
+            if (!exists("cost_lr_partial0")) {
               stop("Function cost_lr_partial0 not found")
             }
 
             sparsity_levels <- 2^seq_len(floor(log2(p)))
 
 
-            dat = data.frame(t(ys))
-            res = FocusCH_HighDim(dat, get_opt_cost = \(...)
-                                  get_partial_opt(..., which_par = sparsity_levels),
-                                  threshold = thresholds[[6]][[v]])
+            dat <- data.frame(t(ys))
+            res <- FocusCH_HighDim(dat,
+              get_opt_cost = \(...)
+              get_partial_opt(..., which_par = sparsity_levels),
+              threshold = thresholds[[6]][[v]]
+            )
             tt <- which(res$nb_at_step == 0)[1]
             detect_time <- ifelse(is.na(tt), N, tt - 1)
             result_array[v, j, t, 6] <- detect_time
@@ -354,22 +353,22 @@ s_ind <- 1
 p_ind <- 1
 
 plot(thetas, apply(results[p_ind, s_ind, , 1, ] - chgptloc, 1, meanabove),
-     type = "l"
+  type = "l"
 )
 lines(thetas, apply(results[p_ind, s_ind, , 2, ] - chgptloc, 1, meanabove),
-      type = "l", col = 2
+  type = "l", col = 2
 )
 lines(thetas, apply(results[p_ind, s_ind, , 3, ] - chgptloc, 1, meanabove),
-      type = "l", col = 3
+  type = "l", col = 3
 )
 lines(thetas, apply(results[p_ind, s_ind, , 4, ] - chgptloc, 1, meanabove),
-      type = "l", col = 4
+  type = "l", col = 4
 )
 lines(thetas, apply(results[p_ind, s_ind, , 5, ] - chgptloc, 1, meanabove),
-      type = "l", col = 5
+  type = "l", col = 5
 )
 lines(thetas, apply(results[p_ind, s_ind, , 6, ] - chgptloc, 1, meanabove),
-      type = "l", col = 6
+  type = "l", col = 6
 )
 
 
@@ -412,14 +411,8 @@ for (p_ind in 1:length(ps)) {
       aes(x = x, y = y, color = Method, linetype = Method)
     ) +
       geom_line() + # Plot lines
-      scale_color_manual(values = c(
-        "black", "blue",
-        "green", "purple", "orange", "red"
-      )) +
-      scale_linetype_manual(values = c(
-        "solid", "dashed",
-        "longdash", "dotdash", "twodash", "dotted"
-      )) +
+      scale_color_manual(values = method_colors) + # shared style (plot_style.R)
+      scale_linetype_manual(values = method_linetypes) +
       theme_bw() +
       theme(legend.position = "right") +
       scale_y_continuous(limits = c(0, N - chgptloc)) +
@@ -452,7 +445,6 @@ for (p_ind in 1:length(ps)) {
 
   if (save) {
     for (j in 1:length(sparsities)) {
-
       ss <- sparsities[j]
 
       ggsave(
@@ -499,7 +491,7 @@ for (p_ind in 1:length(ps)) {
   plots <- list()
   for (i in 1:length(sparsities)) {
     s_ind <- i
-    yy = c(
+    yy <- c(
       apply(results[p_ind, s_ind, , 1, ] - chgptloc, 1, meanabove),
       apply(results[p_ind, s_ind, , 2, ] - chgptloc, 1, meanabove),
       apply(results[p_ind, s_ind, , 3, ] - chgptloc, 1, meanabove),
@@ -508,7 +500,7 @@ for (p_ind in 1:length(ps)) {
       apply(results[p_ind, s_ind, , 6, ] - chgptloc, 1, meanabove)
     )
     yy[is.na(yy)] <- 1
-    yy = log(yy)
+    yy <- log(yy)
     plotdata <- data.frame(
       x = thetas,
       y = yy,
@@ -529,14 +521,8 @@ for (p_ind in 1:length(ps)) {
       aes(x = x, y = y, color = Method, linetype = Method)
     ) +
       geom_line() + # Plot lines
-      scale_color_manual(values = c(
-        "black", "blue",
-        "green", "purple", "orange", "red"
-      )) +
-      scale_linetype_manual(values = c(
-        "solid", "dashed",
-        "longdash", "dotdash", "twodash", "dotted"
-      )) +
+      scale_color_manual(values = method_colors) + # shared style (plot_style.R)
+      scale_linetype_manual(values = method_linetypes) +
       theme_bw() +
       theme(legend.position = "right") +
       scale_y_continuous(limits = c(0, max(yy))) +
@@ -569,7 +555,6 @@ for (p_ind in 1:length(ps)) {
 
   if (save) {
     for (j in 1:length(sparsities)) {
-
       ss <- sparsities[j]
 
       ggsave(
@@ -607,4 +592,3 @@ for (p_ind in 1:length(ps)) {
     )
   }
 }
-

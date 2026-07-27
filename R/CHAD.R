@@ -3,7 +3,6 @@
 #' @importFrom utils read.csv
 
 
-
 #' @title Constructor method for the CHAngepoint Detector (CHAD) class
 #' @param p Dimension of the data
 #' @param method Test statistic to be used, either \code{"mean"} or
@@ -37,6 +36,12 @@
 #' Only required when \code{leading_constant='MC'}
 #' @param N Maximum sample size of which Monte Carlo simulations are performed.
 #' Only required when \code{leading_constant='MC'}
+#' @param pure_R Boolean indicating whether the test statistics should be
+#' computed in pure (interpreted) R code instead of in C. Only applicable when
+#' \code{method = "mean"} (the covariance detector contains no compiled code).
+#' The two implementations compute the same quantities and agree up to
+#' floating point error; the option exists to enable run time comparisons
+#' with methods implemented in interpreted languages
 #' @return An object of class 'CHAD' with the following attributes:
 #' \itemize{
 #' \item \code{class} - subclass and class
@@ -90,7 +95,8 @@ CHAD <- function(p,
                  min_prechange_obs = 1,
                  false_alarm_prob = 0.05,
                  MC_reps = 100,
-                 N = 1000) {
+                 N = 1000,
+                 pure_R = FALSE) {
   if (identical(leading_constant, "MC")) {
     leading_constant <- switch(method,
       mean = MC_mean(
@@ -123,7 +129,8 @@ CHAD <- function(p,
       baseline_sd = baseline_sd,
       constant_penalty = constant_penalty,
       estimate_mean = estimate_mean,
-      min_prechange_obs = min_prechange_obs
+      min_prechange_obs = min_prechange_obs,
+      pure_R = pure_R
     ),
     covariance = new_covariance(
       p = p,
@@ -150,6 +157,10 @@ CHAD <- function(p,
 #' @param min_prechange_obs Minimum number of observations before a changepoint
 #' @param estimate_mean Boolean indicating whether mean-centering should be
 #' performed or if pre-change mean should be assumed to be zero
+#' @param pure_R Boolean indicating whether the test statistics should be
+#' computed in pure (interpreted) R code instead of in C. The two
+#' implementations compute the same quantities and agree up to floating point
+#' error
 #' @return An object of subclass 'meanDetector' of class 'CHAD'
 #' @details Uses the test statistic of Liu et al. (2021) to test for a change
 #' in mean online. The penalty function is given by
@@ -170,7 +181,7 @@ CHAD <- function(p,
 #'  point detection. Ann. Statist. 49(2): 1081-1112.}
 #' @export
 new_mean <- function(p, leading_constant, baseline_sd, constant_penalty,
-                     min_prechange_obs, estimate_mean) {
+                     min_prechange_obs, estimate_mean, pure_R = FALSE) {
   grid <- c()
 
   stats <- c(0, 0) # one for sparse, one for dense regime
@@ -192,6 +203,7 @@ new_mean <- function(p, leading_constant, baseline_sd, constant_penalty,
     allstats = allstats,
     constant_penalty = constant_penalty,
     min_prechange_obs = min_prechange_obs,
+    pure_R = pure_R,
     status = "monitoring"
   )
   return(detector)
@@ -261,8 +273,6 @@ new_covariance <- function(p,
 }
 
 
-
-
 ##### Methods for the 'CHAD' class #####
 
 #' @title Accessor functions for the 'CHAD' class
@@ -324,7 +334,6 @@ status <- function(detector) attr(detector, "status")
 bool_estimate_mean <- function(detector) attr(detector, "estimate_mean")
 
 
-
 #' Reset an object of the class 'CHAD'
 #' @param detector Object of class 'CHAD'
 #' @return Updated object `detector`
@@ -356,7 +365,6 @@ checkChange <- function(detector) {
   }
   return(detector)
 }
-
 
 
 #' @title Function for processing a new data point
@@ -432,17 +440,26 @@ getData.meanDetector <- function(detector, y_new) {
   ## and sums these, and divide by the penalty function. The matrix 'Amatrix'
   ## is returned. Each column represents a candidate changepoint location as
   ## as implied by the grid g. Each row represents a candidate sparsity level.
-  Amatrix <- .Call(
-    compute_CUSUM_and_Threshold, new_cumsums, cumsum, as.integer(n_obs),
-    as.integer(new_grid), as.integer(length(new_grid)), as.integer(p),
-    as.numeric(as), as.numeric(nu_as), as.integer(length(as)),
-    as.integer(estimate_mean)
-  )
+  ## If the detector was created with pure_R = TRUE, the same computation is
+  ## instead performed in pure R (see R/pure_R.R); the two implementations
+  ## agree up to floating point error.
+  if (isTRUE(attr(detector, "pure_R"))) {
+    Amatrix <- compute_CUSUM_and_Threshold_R(
+      new_cumsums, cumsum, n_obs, new_grid, as, nu_as, estimate_mean
+    )
+  } else {
+    Amatrix <- .Call(
+      compute_CUSUM_and_Threshold, new_cumsums, cumsum, as.integer(n_obs),
+      as.integer(new_grid), as.integer(length(new_grid)), as.integer(p),
+      as.numeric(as), as.numeric(nu_as), as.integer(length(as)),
+      as.integer(estimate_mean)
+    )
 
-  Amatrix <- matrix(Amatrix,
-    nrow = length(as), ncol = length(new_grid),
-    byrow = TRUE
-  )
+    Amatrix <- matrix(Amatrix,
+      nrow = length(as), ncol = length(new_grid),
+      byrow = TRUE
+    )
+  }
   attr(detector, "allstats")$Amatrix <- Amatrix
 
   # divide each A by the corresponding penalty value in the r_value vector
@@ -459,8 +476,6 @@ getData.meanDetector <- function(detector, y_new) {
     new_grid <- new_grid[admissable_g_inds]
     A_scaled <- A_scaled[, admissable_g_inds]
   }
-
-
 
 
   attr(detector, "statistics")[1] <- max(A_scaled[1, ])
@@ -503,11 +518,6 @@ getData.meanDetector <- function(detector, y_new) {
   }
 
 
-
-
-
-
-
   if (status(detector) == "monitoring") detector <- checkChange(detector)
   return(detector)
 }
@@ -540,12 +550,10 @@ getData.covarianceDetector <- function(detector, y_new) {
     y_new
 
 
-
   # update cumulative sums over the grid
   if (n_obs == 1) {
     attr(detector, "allstats")$cumsums <- y_new %*% t(y_new)
     attr(detector, "allstats")$cumsums_mean <- y_new
-
   } else {
     newinds <- (attr(detector, "grid") + 1) %in% new_grid
     len <- sum(newinds) + 1
@@ -564,8 +572,6 @@ getData.covarianceDetector <- function(detector, y_new) {
         attr(detector, "allstats")$cumsums_mean[, newinds]
     }
     attr(detector, "allstats")$cumsums_mean <- new_cumsums_mean
-
-
   }
 
   attr(detector, "grid") <- new_grid
@@ -591,7 +597,7 @@ getData.covarianceDetector <- function(detector, y_new) {
       }
     }
     Sigmahat_right <- (S_t - S_t_min_g[i, , ]) / g
-    Sigmahat_left <- S_t_min_g[i,,] / (n_obs - g)
+    Sigmahat_left <- S_t_min_g[i, , ] / (n_obs - g)
 
 
     if (estimate_mean) {
@@ -603,7 +609,6 @@ getData.covarianceDetector <- function(detector, y_new) {
 
       Sigmahat_left <- Sigmahat_left - mean_left %*% t(mean_left)
     }
-
 
 
     pen <- 0
@@ -747,7 +752,6 @@ MC_covariance <- function(p, false_alarm_prob, constant_penalty, MC_reps, N,
                           min_prechange_obs = 1,
                           baseline_operatornorm = NA,
                           seed = 123) {
-
   max_statistics <- rep(NA, MC_reps)
   cat("Running MC simulation for covarianceDetector\n")
 
@@ -766,7 +770,6 @@ MC_covariance <- function(p, false_alarm_prob, constant_penalty, MC_reps, N,
     ys <- matrix(rnorm(N * p), nrow = p, ncol = N)
     for (i in 1:N) {
       detector <- getData(detector, ys[, i])
-
     }
     max_statistics[j] <- attr(detector, "overall_max_statistics")
   }
@@ -797,11 +800,11 @@ MC_covariance <- function(p, false_alarm_prob, constant_penalty, MC_reps, N,
 #' @return Numerical value of the leading constant for the penalty function
 #' @export
 MC_covariance_heavytail <- function(p, false_alarm_prob, constant_penalty, MC_reps, N,
-                          estimate_mean = TRUE,
-                          min_prechange_obs = 1,
-                          baseline_operatornorm = NA,
-                          seed = 123,
-                          df = 5) {
+                                    estimate_mean = TRUE,
+                                    min_prechange_obs = 1,
+                                    baseline_operatornorm = NA,
+                                    seed = 123,
+                                    df = 5) {
   set.seed(seed)
   max_statistics <- rep(NA, MC_reps)
   cat("Running MC simulation for covarianceDetector\n")
@@ -810,13 +813,13 @@ MC_covariance_heavytail <- function(p, false_alarm_prob, constant_penalty, MC_re
       cat("Iteration: ", j, "\n")
     }
     detector <- CHAD(p,
-                     method = "covariance", leading_constant = c(100000),
-                     constant_penalty = constant_penalty,
-                     estimate_mean = estimate_mean,
-                     baseline_operatornorm = baseline_operatornorm,
-                     min_prechange_obs = min_prechange_obs
+      method = "covariance", leading_constant = c(100000),
+      constant_penalty = constant_penalty,
+      estimate_mean = estimate_mean,
+      baseline_operatornorm = baseline_operatornorm,
+      min_prechange_obs = min_prechange_obs
     )
-    ys <- matrix(rt(N * p, df = df), nrow = p, ncol = N) * sqrt((df-2)/df)
+    ys <- matrix(rt(N * p, df = df), nrow = p, ncol = N) * sqrt((df - 2) / df)
     for (i in 1:N) {
       detector <- getData(detector, ys[, i])
     }
