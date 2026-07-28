@@ -1,5 +1,5 @@
 ####### Simulation study for run times #######
-## ...for the paper 'A grid-based framework for fast online changepoint detection',
+## ...for the paper 'A grid-based methodology for fast online changepoint detection',
 ## Per August Jarval Moen, 2026.
 
 ## The run time study compares:
@@ -34,12 +34,14 @@ library(abind)
 library(ggplot2)
 library(patchwork)
 
+## Seed
+set.seed(123)
 ## Saving options
-save <- FALSE # if results should be saved
+save <- TRUE # if results should be saved
 
 ## IMPORTANT! Specify the directory in which results should be saved:
 ## (in the maindir variable)
-maindir <- ""
+maindir <- "/Users/peraugustmoen/Library/CloudStorage/OneDrive-UniversitetetiOslo/project3/jrss-b-second_revision_coding_results"
 dateandtime <- gsub(" ", "--", as.character(Sys.time()))
 dateandtime <- gsub(":", ".", dateandtime)
 savedir <- file.path(maindir, dateandtime)
@@ -80,8 +82,8 @@ mdfocus_cran_projections <- function(dim) {
 
 
 ## Global params
-num_sim_n <- 10 # number of iterations for the simulation varying n
-num_sim_p <- 10 # number of iterations for the simulation varying p
+num_sim_n <- 20 # number of iterations for the simulation varying n
+num_sim_p <- 20 # number of iterations for the simulation varying p
 num_methods <- 8
 estimate_mean <- FALSE
 estimate_mean_until <- 0
@@ -92,11 +94,11 @@ if (!estimate_mean) {
 }
 
 ## Measurement grids, geometrically spaced:
-num_t_points <- 25 # number of measurement points over t (max t is N below)
+num_t_points <- 15 # number of measurement points over t (max t is N below)
 t_min <- 100 # smallest measurement point over t
 num_p_points <- 15 # number of values of p
-p_min <- 8 # smallest value of p
-p_max <- 200 # largest value of p
+p_min <- 10 # smallest value of p
+p_max <- 1000 # largest value of p
 
 ## Common threshold to have no detections:
 runtime_thresh <- 80000
@@ -105,8 +107,8 @@ runtime_thresh <- 80000
 ## Labels for the method variants. colors and line types are defined in
 ## plot_style.R
 method_labels <- c(
-  "CHAD (Rcpp)", "ocd", "Mei", "XS", "Chan",
-  "MdFOCuS (Rcpp)", "MdFOCuS (R)", "CHAD (R)"
+  "CHAD (Rcpp)", "ocd", "Mei", "Xie and Siegmund", "Chan",
+  "MdFOCuS (Rcpp)", "MdFOCuS", "CHAD"
 )
 
 ## The two plot sets are defined below.
@@ -121,7 +123,7 @@ plot_subsets <- list(
 
 ### Simulation for N
 {
-  N <- 10000 # max number of data samples considered
+  N <- 100000 # max number of data samples considered
   p_const <- 100
 
 
@@ -286,7 +288,7 @@ legend("topleft", legend = method_labels, col = 1:num_methods, lty = 1:num_metho
     cat("v = ", v, "\n")
     for (j in seq_along(p_values)) {
       p <- p_values[j]
-      cat("p = ", p, "\n")
+      # cat("p = ", p, "\n")
       ys <- matrix(rnorm(n_const * p), nrow = p, ncol = n_const)
       detector <- CHAD(p,
         method = "mean", leading_constant = rep(runtime_thresh, 2),
@@ -425,12 +427,16 @@ make_runtime_panel <- function(mat, xvec, subset, ylab_text, xlab_expr,
     xlab(xlab_expr) +
     theme(legend.title = element_blank())
   if (loglog) {
-    ## Add a line with slope 1:
-    ytop <- max(plotdata$y, na.rm = TRUE)
-    x1 <- max(xvec)
-    x0 <- x1 / 3
-    y0 <- ytop * 1.2
-    y1 <- y0 * (x1 / x0) # slope 1 on the log-log scale
+    ## slope-1 reference segment in the top-right corner:
+    yv <- plotdata$y[is.finite(plotdata$y) & plotdata$y > 0]
+    ytop <- max(yv)
+    lx0 <- log10(min(xvec))
+    lx1 <- log10(max(xvec))
+    xb <- lx0 + 0.94 * (lx1 - lx0)
+    dlx <- min(0.22 * (lx1 - lx0), 0.6)
+    xa <- xb - dlx # left end
+    ya <- log10(ytop) + 0.08 # lower end, just above the tallest curve
+    yb <- ya + dlx # slope 1: same number of decades in x and y
     gg <- gg +
       scale_x_log10() +
       scale_y_log10(
@@ -438,12 +444,12 @@ make_runtime_panel <- function(mat, xvec, subset, ylab_text, xlab_expr,
         labels = function(b) format(b, scientific = FALSE, drop0trailing = TRUE)
       ) +
       annotate("segment",
-        x = x0, xend = x1, y = y0, yend = y1,
+        x = 10^xa, xend = 10^xb, y = 10^ya, yend = 10^yb,
         color = "gray40", linewidth = 0.35
       ) +
       annotate("text",
-        x = sqrt(x0 * x1) / 1.35, y = sqrt(y0 * y1) * 1.35,
-        label = "slope 1", color = "gray40", size = 2.6
+        x = 10^((xa + xb) / 2), y = 10^((ya + yb) / 2),
+        label = "slope 1", color = "gray40", size = 2.6, vjust = -0.8
       )
   }
   return(gg)

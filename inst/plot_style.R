@@ -11,7 +11,7 @@ method_colors <- c(
   "Chan" = "blue",
   "MdFOCuS" = "green",
   "MdFOCuS (R)" = "green",
-  "MdFOCuS (Rcpp)" = "darkgreen"
+  "MdFOCuS (Rcpp)" = "forestgreen"
 )
 
 method_linetypes <- c(
